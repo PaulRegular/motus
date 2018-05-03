@@ -1,0 +1,12 @@
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Rproj
+*.zip
+*.dll
+*.o
+references/
+data-raw/2015/
+data-raw/2016/
+data-raw/2017/
+.Rproj.user

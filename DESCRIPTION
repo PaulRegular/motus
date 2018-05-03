@@ -1,0 +1,13 @@
+Package: motus
+Title: State-space models for animal movement collected using VEMCO telemetry
+Version: 0.0.0.9000
+Authors@R: person("Paul", "Regular", 
+                      email = "Paul.Regular@dfo-mpo.gc.ca", 
+                      role = c("aut", "cre"))
+Description: This is a research compendium for the state-space analysis for VEMCO telemetry data
+Depends: R (>= 3.4.2), TMB, RcppEigen
+License: NA
+Encoding: UTF-8
+LazyData: true
+LinkingTo: TMB, RcppEigen
+RoxygenNote: 6.0.1
