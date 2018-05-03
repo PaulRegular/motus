@@ -34,6 +34,7 @@ tracks$northing <- NULL
 track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 res <- fit_ssm(track)
 
+plot_track(res$track)
 
 
 
