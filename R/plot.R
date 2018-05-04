@@ -25,7 +25,7 @@ plot_track <- function(track, title = "") {
                showticklabels = FALSE)
 
     cols <- RColorBrewer::brewer.pal(8, "RdBu")
-    track$col <- viridis::viridis(100)[cut(track$gamma_est, 100)]
+    track$col <- viridis::viridis(100)[cut(track$logit_gamma_est, 100)]
 
     p <- plot_ly(data = track, x = ~lon, y = ~lat) %>%
         add_markers(size = I(2), color = I("black"), name = "Observed") %>%

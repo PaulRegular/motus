@@ -53,8 +53,10 @@ tmb_pars <- list(log_sd_lon = rep(0, length(unique(tmb_data$n_i))),
                  log_nu_lat = rep(log(3), length(unique(tmb_data$n_i))),
                  log_scale_lon = rep(0, length(unique(tmb_data$n_i))),
                  log_scale_lat = rep(0, length(unique(tmb_data$n_i))))
+
+## df fixed to 3 to account for heavy tails while maintaining statistical properities (mean, sd, etc.)
 tmb_map <- list(log_nu_lon = rep(factor(NA), length(tmb_pars$log_nu_lon)),
-                log_nu_lat = rep(factor(NA), length(tmb_pars$log_nu_lat)))   ## df fixed to 3 to account for heavy tails while maintaining statistical properities (mean etc.)
+                log_nu_lat = rep(factor(NA), length(tmb_pars$log_nu_lat)))
 str(tmb_data)
 str(tmb_pars)
 
