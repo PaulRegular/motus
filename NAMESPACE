@@ -2,6 +2,7 @@
 
 export(fit_ssm)
 export(plot_track)
+export(plot_trend)
 import(TMB)
 import(plotly)
 useDynLib(motus)

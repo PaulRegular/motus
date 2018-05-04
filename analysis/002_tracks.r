@@ -18,6 +18,7 @@ tracks$TRANSMITTER <- paste0(tracks$array, "-", tracks$TRANSMITTER)
 ## Discard tracks with less than n records
 tracks[, tot_fixes := .N, by = "TRANSMITTER"]
 tracks <- tracks[tracks$tot_fixes > 100, ]
+tracks <- data.frame(tracks)
 
 ## Discard individuals that presumbably either died or shead the transmitter
 ## (i.e. Transmitters that remained within the array for the whole experiment)
@@ -32,9 +33,12 @@ tracks$northing <- NULL
 
 ## Fit model to one individual
 track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
+# track <- tracks[tracks$TRANSMITTER == "Carson-2017-31288", ]
 res <- fit_ssm(track)
 
 plot_track(res$track)
-
-
+p_lon <- plot_trend(res$track, y_name = "lon")
+p_lat <- plot_trend(res$track, y_name = "lat")
+p_gamma <- plot_trend(res$track, y_name = "gamma")
+subplot(p_lon, p_lat, p_gamma, nrows = 3, shareX = TRUE)
 
