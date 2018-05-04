@@ -2,25 +2,41 @@
 
 #' Function for fitting state-space movement model
 #'
-#' @param track  data.frame of an individual track containing time, UTM coordinates,
+#' @param track  data.frame of an individual track containing time, UTM coordinates, time differences
 #'               and estimates of observation error. UTM coordinate columns should be labeled
-#'               lon and lat and units should equal meters. Observation error should be labeled
+#'               lon and lat and units should equal km. time difference should be a ratio of
+#'               the minimum sampling interval and named delta_t. Observation error should be labeled
 #'               1) sd_lon and sd_lat for the normal distribution; 2) tau_lon, tau_lat, nu_lon,
 #'               and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
 #'               scale_lat for the cauchy distribution.
+#' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
+#'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
 #' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy")
-#' @param map    Map for \code{\link{TMB::MakeADFun}}
 #' @param silent Disable tracing information?
 #'
 #' @export
 #'
 
-fit_ssm <- function(track, dist = "t", map = list(), silent = FALSE) {
+fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
+
+    ## Center lon and lat values and scale using max deviation (or sd)
+    ## this should aid convergence by scaling the x parameters
+    center_lon <- mean(track$lon)
+    center_lat <- mean(track$lat)
+    if (is.character(scale)) {
+        if (scale == "sd") {
+            scale <- sd(c(track$lon - center_lon, track$lat - center_lat))
+        }
+        if (scale == "max") {
+            scale <- max(abs(c(track$lon - center_lon, track$lat - center_lat)))
+        }
+    }
 
     ## Set-up TMB data
     ## Note: centered the coordinates aid convergance
-    tmb_data <- list(y_lon = track$lon - mean(track$lon),
-                     y_lat = track$lat - mean(track$lat),
+    tmb_data <- list(y_lon = track$lon - center_lon,
+                     y_lat = track$lat - center_lat,
+                     scale = scale,
                      obs_sd_lon = track$sd_lon,
                      obs_sd_lat = track$sd_lat,
                      tau_lon = track$tau_lon,
@@ -29,26 +45,24 @@ fit_ssm <- function(track, dist = "t", map = list(), silent = FALSE) {
                      nu_lat = track$nu_lat,
                      scale_lon = track$scale_lon,
                      scale_lat = track$scale_lat,
-                     delta_t = c(1, diff(as.numeric(track$DATETIME))/60/1), # mins
+                     delta_t = track$delta_t,
                      n = nrow(track),
                      dist = as.numeric(factor(dist, levels = c("normal", "t", "cauchy"))) - 1)
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
-    ## Note: x_lon and x_lat values are in km units (not m like y_lon and y_lat) - this was done
-    ##       to improve parameter scaling and ease convergance
     tmb_pars <- list(logit_gamma = rep(0, length(tmb_data$y_lon)),
                      log_sd_gamma = 0,
                      log_sd_lon = 0,
                      log_sd_lat = 0,
                      log_alpha_lon = 0,
                      log_alpha_lat = 0,
-                     x_lon_km = tmb_data$y_lon / 1000,
-                     x_lat_km = tmb_data$y_lat / 1000)
+                     x_slon = tmb_data$y_lon / scale,
+                     x_slat = tmb_data$y_lat / scale)
 
     ## Generate objective function, minimize and get parameters
-    obj <- MakeADFun(tmb_data, tmb_pars, random = c("logit_gamma", "x_lon_km", "x_lat_km"),
-                     DLL = "motus", map = map, silent = silent)
+    obj <- MakeADFun(tmb_data, tmb_pars, random = c("logit_gamma", "x_slon", "x_slat"),
+                     DLL = "motus", silent = silent)
     control <- list(eval.max = 10000, iter.max = 10000)
     opt <- nlminb(obj$par, obj$fn, obj$gr, control = control)
     sd_rep <- sdreport(obj)
@@ -65,8 +79,8 @@ fit_ssm <- function(track, dist = "t", map = list(), silent = FALSE) {
     xrep_gamma <- sd_res[rownames(sd_res) %in% "logit_gamma", ]
 
     ## Save states to the data
-    track$lon_est <- xrep_lon[, 1] + mean(track$lon)
-    track$lat_est <- xrep_lat[, 1] + mean(track$lat)
+    track$lon_est <- (xrep_lon[, 1] + mean(track$lon))
+    track$lat_est <- (xrep_lat[, 1] + mean(track$lat))
     track$lon_lwr <- (xrep_lon[, 1] - qnorm(0.975) * xrep_lon[, 2]) + mean(track$lon)
     track$lon_upr <- (xrep_lon[, 1] + qnorm(0.975) * xrep_lon[, 2]) + mean(track$lon)
     track$lat_lwr <- (xrep_lat[, 1] - qnorm(0.975) * xrep_lat[, 2]) + mean(track$lat)
@@ -79,7 +93,7 @@ fit_ssm <- function(track, dist = "t", map = list(), silent = FALSE) {
     track$gamma_upr <- plogis(track$logit_gamma_upr)
 
     ## Tidy par table
-    ind <- rownames(sd_res) %in% c("x_lon", "x_lat", "x_lon_km", "x_lat_km",
+    ind <- rownames(sd_res) %in% c("x_lon", "x_lat", "x_slon", "x_slat",
                                    "log_alpha_lon", "log_alpha_lat", "logit_gamma")
     main_par <- sd_res[!ind, ]
     main_par <- data.frame(par = rownames(main_par),

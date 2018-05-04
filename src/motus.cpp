@@ -29,6 +29,7 @@ Type objective_function<Type>::operator() ()
     // Input data
     DATA_VECTOR(y_lon);       // Observed locations
     DATA_VECTOR(y_lat);
+    DATA_SCALAR(scale);       // used for scaling unobserved locations (x)
     DATA_VECTOR(delta_t);     // Time interval between two consecutive location
     DATA_VECTOR(obs_sd_lon);  // normal distribution observation error parameters from obs_error model
     DATA_VECTOR(obs_sd_lat);
@@ -50,8 +51,8 @@ Type objective_function<Type>::operator() ()
     PARAMETER(log_alpha_lat);
 
     // The unobserved locations of the animal, i.e states
-    PARAMETER_VECTOR(x_lon_km);
-    PARAMETER_VECTOR(x_lat_km);
+    PARAMETER_VECTOR(x_slon);
+    PARAMETER_VECTOR(x_slat);
 
     // Transformation of the input parameters to model format
     /* These transformations are made to insured that the parameters have sensical values.
@@ -62,8 +63,8 @@ Type objective_function<Type>::operator() ()
     Type sd_lat = exp(log_sd_lat);
     Type alpha_lon = exp(log_alpha_lon);
     Type alpha_lat = exp(log_alpha_lat);
-    vector<Type> x_lon = x_lon_km * Type(1000.0);
-    vector<Type> x_lat = x_lat_km * Type(1000.0);
+    vector<Type> x_lon = x_slon * scale;
+    vector<Type> x_lat = x_slat * scale;
 
     // Create a variable that will keep track of the negative log likelihood (nll)
     parallel_accumulator<Type> nll(this);

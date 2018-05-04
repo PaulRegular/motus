@@ -4,15 +4,19 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, dist = "t", silent = FALSE)
+fit_ssm(track, scale = "sd", dist = "t", silent = FALSE)
 }
 \arguments{
-\item{track}{data.frame of an individual track containing time, UTM coordinates,
+\item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
 and estimates of observation error. UTM coordinate columns should be labeled
-lon and lat and units should equal meters. Observation error should be labeled
+lon and lat and units should equal km. time difference should be a ratio of
+the minimum sampling interval and named delta_t. Observation error should be labeled
 1) sd_lon and sd_lat for the normal distribution; 2) tau_lon, tau_lat, nu_lon,
 and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
 scale_lat for the cauchy distribution.}
+
+\item{scale}{Method for scaling x values to improve parameter scaling and aid convergence, where
+"sd" scales using sd, "max" scales to max deviation, or provide a value.}
 
 \item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy")}
 
