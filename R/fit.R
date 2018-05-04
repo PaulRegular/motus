@@ -51,17 +51,17 @@ fit_ssm <- function(track, silent = FALSE) {
     AIC <- 2 * k + 2 * nll + 2 * k * (k + 1) / (k - 1)
 
     ## Extract state estimates
-    xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon_km", ] * 1000
-    xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat_km", ] * 1000
+    xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon_km", ]
+    xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat_km", ]
     xrep_gamma <- sd_res[rownames(sd_res) %in% "logit_gamma", ]
 
     ## Save states to the data
-    track$lon_est <- xrep_lon[, 1] + mean(track$lon)
-    track$lat_est <- xrep_lat[, 1] + mean(track$lat)
-    track$lon_lwr <- track$lon_est - qnorm(0.975) * xrep_lon[, 2]
-    track$lon_upr <- track$lon_est + qnorm(0.975) * xrep_lon[, 2]
-    track$lat_lwr <- track$lat_est - qnorm(0.975) * xrep_lon[, 2]
-    track$lat_upr <- track$lat_est + qnorm(0.975) * xrep_lat[, 2]
+    track$lon_est <- xrep_lon[, 1] * 1000 + mean(track$lon)
+    track$lat_est <- xrep_lat[, 1] * 1000 + mean(track$lat)
+    track$lon_lwr <- (xrep_lon[, 1] - qnorm(0.975) * xrep_lon[, 2]) * 1000 + mean(track$lon)
+    track$lon_upr <- (xrep_lon[, 1] + qnorm(0.975) * xrep_lon[, 2]) * 1000 + mean(track$lon)
+    track$lat_lwr <- (xrep_lat[, 1] - qnorm(0.975) * xrep_lat[, 2]) * 1000 + mean(track$lat)
+    track$lat_upr <- (xrep_lat[, 1] + qnorm(0.975) * xrep_lat[, 2]) * 1000 + mean(track$lat)
     track$gamma_est <- plogis(xrep_gamma[, 1])
     track$gamma_lwr <- plogis(xrep_gamma[, 1] - qnorm(0.975) * xrep_gamma[, 2])
     track$gamma_upr <- plogis(xrep_gamma[, 1] + qnorm(0.975) * xrep_gamma[, 2])

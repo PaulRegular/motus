@@ -32,11 +32,11 @@ tracks$easting <- NULL
 tracks$northing <- NULL
 
 ## Fit model to one individual
-track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
-# track <- tracks[tracks$TRANSMITTER == "Carson-2017-31288", ]
+track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ] # "Carson-2016-53231"
+# track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
 res <- fit_ssm(track)
 
-plot_track(res$track)
+# plot_track(res$track)
 p_lon <- plot_trend(res$track, y_name = "lon")
 p_lat <- plot_trend(res$track, y_name = "lat")
 p_gamma <- plot_trend(res$track, y_name = "gamma")
