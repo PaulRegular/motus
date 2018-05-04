@@ -5,24 +5,33 @@
 #' @param track  data.frame of an individual track containing time, UTM coordinates,
 #'               and estimates of observation error. UTM coordinate columns should be labeled
 #'               lon and lat and units should equal meters. Observation error should be labeled
-#'               tau_lon, tau_lat, nu_lon, and nu_lat for the parameters for the t-distribution.
+#'               1) sd_lon and sd_lat for the normal distribution; 2) tau_lon, tau_lat, nu_lon,
+#'               and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
+#'               scale_lat for the cauchy distribution.
+#' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy")
+#' @param map    Map for \code{\link{TMB::MakeADFun}}
 #' @param silent Disable tracing information?
 #'
 #' @export
 #'
 
-fit_ssm <- function(track, silent = FALSE) {
+fit_ssm <- function(track, dist = "t", map = list(), silent = FALSE) {
 
     ## Set-up TMB data
     ## Note: centered the coordinates aid convergance
     tmb_data <- list(y_lon = track$lon - mean(track$lon),
                      y_lat = track$lat - mean(track$lat),
+                     obs_sd_lon = track$sd_lon,
+                     obs_sd_lat = track$sd_lat,
                      tau_lon = track$tau_lon,
                      tau_lat = track$tau_lat,
                      nu_lon = track$nu_lon,
                      nu_lat = track$nu_lat,
+                     scale_lon = track$scale_lon,
+                     scale_lat = track$scale_lat,
                      delta_t = c(1, diff(as.numeric(track$DATETIME))/60/1), # mins
-                     n = nrow(track))
+                     n = nrow(track),
+                     dist = as.numeric(factor(dist, levels = c("normal", "t", "cauchy"))) - 1)
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
@@ -39,7 +48,7 @@ fit_ssm <- function(track, silent = FALSE) {
 
     ## Generate objective function, minimize and get parameters
     obj <- MakeADFun(tmb_data, tmb_pars, random = c("logit_gamma", "x_lon_km", "x_lat_km"),
-                     DLL = "motus", silent = silent)
+                     DLL = "motus", map = map, silent = silent)
     control <- list(eval.max = 10000, iter.max = 10000)
     opt <- nlminb(obj$par, obj$fn, obj$gr, control = control)
     sd_rep <- sdreport(obj)
@@ -51,23 +60,27 @@ fit_ssm <- function(track, silent = FALSE) {
     AIC <- 2 * k + 2 * nll + 2 * k * (k + 1) / (k - 1)
 
     ## Extract state estimates
-    xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon_km", ]
-    xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat_km", ]
+    xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon", ]
+    xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat", ]
     xrep_gamma <- sd_res[rownames(sd_res) %in% "logit_gamma", ]
 
     ## Save states to the data
-    track$lon_est <- xrep_lon[, 1] * 1000 + mean(track$lon)
-    track$lat_est <- xrep_lat[, 1] * 1000 + mean(track$lat)
-    track$lon_lwr <- (xrep_lon[, 1] - qnorm(0.975) * xrep_lon[, 2]) * 1000 + mean(track$lon)
-    track$lon_upr <- (xrep_lon[, 1] + qnorm(0.975) * xrep_lon[, 2]) * 1000 + mean(track$lon)
-    track$lat_lwr <- (xrep_lat[, 1] - qnorm(0.975) * xrep_lat[, 2]) * 1000 + mean(track$lat)
-    track$lat_upr <- (xrep_lat[, 1] + qnorm(0.975) * xrep_lat[, 2]) * 1000 + mean(track$lat)
-    track$gamma_est <- plogis(xrep_gamma[, 1])
-    track$gamma_lwr <- plogis(xrep_gamma[, 1] - qnorm(0.975) * xrep_gamma[, 2])
-    track$gamma_upr <- plogis(xrep_gamma[, 1] + qnorm(0.975) * xrep_gamma[, 2])
+    track$lon_est <- xrep_lon[, 1] + mean(track$lon)
+    track$lat_est <- xrep_lat[, 1] + mean(track$lat)
+    track$lon_lwr <- (xrep_lon[, 1] - qnorm(0.975) * xrep_lon[, 2]) + mean(track$lon)
+    track$lon_upr <- (xrep_lon[, 1] + qnorm(0.975) * xrep_lon[, 2]) + mean(track$lon)
+    track$lat_lwr <- (xrep_lat[, 1] - qnorm(0.975) * xrep_lat[, 2]) + mean(track$lat)
+    track$lat_upr <- (xrep_lat[, 1] + qnorm(0.975) * xrep_lat[, 2]) + mean(track$lat)
+    track$logit_gamma_est <- xrep_gamma[, 1]
+    track$logit_gamma_lwr <- xrep_gamma[, 1] - qnorm(0.975) * xrep_gamma[, 2]
+    track$logit_gamma_upr <- xrep_gamma[, 1] + qnorm(0.975) * xrep_gamma[, 2]
+    track$gamma_est <- plogis(track$logit_gamma_est)
+    track$gamma_lwr <- plogis(track$logit_gamma_lwr)
+    track$gamma_upr <- plogis(track$logit_gamma_upr)
 
     ## Tidy par table
-    ind <- rownames(sd_res) %in% c("x_lon_km", "x_lat_km", "log_alpha_lon", "log_alpha_lat", "logit_gamma")
+    ind <- rownames(sd_res) %in% c("x_lon", "x_lat", "x_lon_km", "x_lat_km",
+                                   "log_alpha_lon", "log_alpha_lat", "logit_gamma")
     main_par <- sd_res[!ind, ]
     main_par <- data.frame(par = rownames(main_par),
                            est = main_par[, 1], sd = main_par[, 2],

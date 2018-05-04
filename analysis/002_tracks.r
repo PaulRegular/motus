@@ -2,6 +2,8 @@
 ## Largly based on code provided by auger-methe_et_al_2017_Supplement_4_RCode
 library(TMB)
 library(data.table)
+library(motus)
+library(plotly)
 
 ## Simplify data name
 tracks <- crab_dat
@@ -34,11 +36,12 @@ tracks$northing <- NULL
 ## Fit model to one individual
 track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ] # "Carson-2016-53231"
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track)
+res <- fit_ssm(track, dist = "t")
+res$sd_rep
+hist(res$track$gamma_est, breaks = 100)
 
 # plot_track(res$track)
 p_lon <- plot_trend(res$track, y_name = "lon")
 p_lat <- plot_trend(res$track, y_name = "lat")
 p_gamma <- plot_trend(res$track, y_name = "gamma")
 subplot(p_lon, p_lat, p_gamma, nrows = 3, shareX = TRUE)
-

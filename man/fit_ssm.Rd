@@ -4,13 +4,17 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, silent = FALSE)
+fit_ssm(track, dist = "t", silent = FALSE)
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates,
 and estimates of observation error. UTM coordinate columns should be labeled
 lon and lat and units should equal meters. Observation error should be labeled
-tau_lon, tau_lat, nu_lon, and nu_lat for the parameters for the t-distribution.}
+1) sd_lon and sd_lat for the normal distribution; 2) tau_lon, tau_lat, nu_lon,
+and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
+scale_lat for the cauchy distribution.}
+
+\item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy")}
 
 \item{silent}{Disable tracing information?}
 }
