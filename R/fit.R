@@ -11,13 +11,16 @@
 #'               scale_lat for the cauchy distribution.
 #' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
 #'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
+#' @param fix_gamma Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?
 #' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy")
 #' @param silent Disable tracing information?
+#' @param gr_threshold Stop if maximum gradient exceeds this value (large values indicate convergence issues)
 #'
 #' @export
 #'
 
-fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
+fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent = FALSE,
+                    gr_threshold = 10) {
 
     ## Center lon and lat values and scale using max deviation (or sd)
     ## this should aid convergence by scaling the x parameters
@@ -47,7 +50,8 @@ fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
                      scale_lat = track$scale_lat,
                      delta_t = track$delta_t,
                      n = nrow(track),
-                     dist = as.numeric(factor(dist, levels = c("normal", "t", "cauchy"))) - 1)
+                     dist = as.numeric(factor(dist, levels = c("normal", "t", "cauchy"))) - 1,
+                     fix_gamma = as.numeric(fix_gamma))
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
@@ -60,13 +64,27 @@ fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
                      x_slon = tmb_data$y_lon / scale,
                      x_slat = tmb_data$y_lat / scale)
 
+    ## Conditional mapping
+    if (fix_gamma) {
+        tmb_map <- list(logit_gamma = rep(factor(1), length(tmb_data$y_lon)),
+                        log_sd_gamma = factor(NA))
+        tmb_random <- c("x_slon", "x_slat")
+    } else {
+        tmb_random <- c("logit_gamma", "x_slon", "x_slat")
+        tmb_map <- list()
+    }
+
     ## Generate objective function, minimize and get parameters
-    obj <- MakeADFun(tmb_data, tmb_pars, random = c("logit_gamma", "x_slon", "x_slat"),
+    obj <- MakeADFun(tmb_data, tmb_pars, random = tmb_random, map = tmb_map,
                      DLL = "motus", silent = silent)
     control <- list(eval.max = 10000, iter.max = 10000)
     opt <- nlminb(obj$par, obj$fn, obj$gr, control = control)
     sd_rep <- sdreport(obj)
     sd_res <- summary(sd_rep)
+
+    ## Maximum gradient
+    max_gr <- max(abs(sd_rep$gradient.fixed))
+    stopifnot(max_gr <= gr_threshold)
 
     ## Calculate AIC
     nll <- opt$objective
@@ -77,6 +95,9 @@ fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
     xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon", ]
     xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat", ]
     xrep_gamma <- sd_res[rownames(sd_res) %in% "logit_gamma", ]
+    if (fix_gamma) {
+        xrep_gamma <- t(replicate(tmb_data$n, xrep_gamma))
+    }
 
     ## Save states to the data
     track$lon_est <- (xrep_lon[, 1] + mean(track$lon))
@@ -105,7 +126,7 @@ fit_ssm <- function(track, scale = "sd", dist = "t", silent = FALSE) {
     main_par$par <- factor(main_par$par, levels = c("log_sigma_gamma", "log_sigma_lon", "log_sigma_lat"))
 
     ## Return results
-    list(tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt, rep = rep,
+    list(tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt, rep = rep, max_gr = max_gr,
          sd_rep = sd_rep, sd_res = sd_res, AIC = AIC, track = track,
          main_par = main_par)
 

@@ -41,6 +41,7 @@ Type objective_function<Type>::operator() ()
     DATA_VECTOR(scale_lat);
     DATA_INTEGER(n);          // Number of records
     DATA_INTEGER(dist);       // Switch for the distribution to use for observation error
+    DATA_INTEGER(fix_gamma);  // Switch for estimating fixed or time varrying gamma
 
     // Input parameters
     PARAMETER_VECTOR(logit_gamma);   // Autocorrelation - logit because 0 < gamma < 1
@@ -76,7 +77,9 @@ Type objective_function<Type>::operator() ()
 
     // Process equation
     for (int i = 1; i < n; ++i) {
-        nll -= dnorm(logit_gamma(i), logit_gamma(i - 1), delta_t(i) * sd_gamma, true);   // Assume gamma follows a random walk
+        if (fix_gamma == 0) {
+            nll -= dnorm(logit_gamma(i), logit_gamma(i - 1), delta_t(i) * sd_gamma, true);   // Assume gamma follows a random walk
+        }
         if (i == 1) {
             nll -= dnorm(x_lon(i), x_lon(i - 1), delta_t(i) * sd_lon, true);             // Assume a simple random walk from the first location
             nll -= dnorm(x_lat(i), x_lat(i - 1), delta_t(i) * sd_lat, true);

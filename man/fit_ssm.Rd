@@ -4,7 +4,8 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, scale = "sd", dist = "t", silent = FALSE)
+fit_ssm(track, scale = "sd", fix_gamma = FALSE, dist = "t",
+  silent = FALSE, gr_threshold = 10)
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -18,9 +19,13 @@ scale_lat for the cauchy distribution.}
 \item{scale}{Method for scaling x values to improve parameter scaling and aid convergence, where
 "sd" scales using sd, "max" scales to max deviation, or provide a value.}
 
+\item{fix_gamma}{Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?}
+
 \item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy")}
 
 \item{silent}{Disable tracing information?}
+
+\item{gr_threshold}{Stop if maximum gradient exceeds this value (large values indicate convergence issues)}
 }
 \description{
 Function for fitting state-space movement model
