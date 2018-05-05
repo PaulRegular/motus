@@ -24,23 +24,19 @@ plot_track <- function(track, title = "") {
                showline = FALSE,
                showticklabels = FALSE)
 
-    cols <- RColorBrewer::brewer.pal(8, "RdBu")
-    track$col <- viridis::viridis(100)[cut(track$logit_gamma_est, 100)]
+    track$gamma_col <- cut(track$gamma_est, breaks = seq(0, 1, 0.1))
 
-    p <- plot_ly(data = track, x = ~lon, y = ~lat) %>%
+    plot_ly(data = track, x = ~lon, y = ~lat, colors = viridis::viridis(100)) %>%
         add_markers(size = I(2), color = I("black"), name = "Observed") %>%
+        add_segments(x = ~lon_est[-nrow(track)], xend = ~lon_est[-1],
+                     y = ~lat_est[-nrow(track)], yend = ~lat_est[-1],
+                     color = ~gamma_col[-nrow(track)], showlegend = TRUE,
+                     text = ~round(gamma_est[-nrow(track)], 2), name = "") %>%
         layout(
             title = title,
             yaxis = c(ax, list(scaleanchor = "x")),
             xaxis = ax
         )
-    for (i in seq(nrow(track))[-1]) {
-        p <- p %>% add_segments(x = track$lon_est[i - 1], y = track$lat_est[i - 1],
-                                xend = track$lon_est[i], yend = track$lat_est[i],
-                                color = I(track$col[i - 1]),
-                                showlegend = FALSE, name = "Predicted")
-    }
-    p
 
 }
 
