@@ -44,7 +44,7 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31323", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31305", ] # cauchy worked here
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, dist = "t", scale = 1000, fix_gamma = FALSE)
+res <- fit_ssm(track, dist = "null", fix_gamma = FALSE)
 res$sd_rep
 hist(res$track$gamma_est, breaks = 100)
 hist(res$track$logit_gamma_est, breaks = 100)
@@ -66,7 +66,7 @@ system.time({
     success <- 0
     for (i in seq_along(ids)) {
         track <- tracks[tracks$TRANSMITTER == ids[i], ]
-        tfits[[i]] <- try(fit_ssm(track, dist = "t", scale = 5000, silent = TRUE))
+        tfits[[i]] <- try(fit_ssm(track, dist = "t", scale = 5000, silent = TRUE, fix_gamma = TRUE))
         if (class(tfits[[i]]) != "try-error") success <- success + 1
         # nfits[[i]] <- try(fit_ssm(track, dist = "normal", scale = 1000, silent = TRUE))
         # cfits[[i]] <- try(fit_ssm(track, dist = "cauchy", scale = 1000, silent = TRUE))
@@ -76,8 +76,8 @@ system.time({
 })
 
 mean(sapply(tfits, class) != "try-error")
-mean(sapply(nfits, class) != "try-error")
-mean(sapply(cfits, class) != "try-error")
+# mean(sapply(nfits, class) != "try-error")
+# mean(sapply(cfits, class) != "try-error")
 
 success <- names(which(sapply(cfits, class) != "try-error"))
 res <- cfits[[success[14]]]
@@ -94,4 +94,6 @@ unique(res$track$TRANSMITTER)
 ## should think about changes in angle: "Carson-2017-53263"
 
 ## Add start and end label to plot_track
+## - Also consider impose transparancy using delta_t??
+## Implement two-step optimization - allow model fitting assuming no observation error, then fit with observation error
 ## Allow for covariate effects on gamma and model error as an autocorrelated process (AR1)

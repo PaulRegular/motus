@@ -64,8 +64,12 @@ Type objective_function<Type>::operator() ()
     Type sd_lat = exp(log_sd_lat);
     Type alpha_lon = exp(log_alpha_lon);
     Type alpha_lat = exp(log_alpha_lat);
-    vector<Type> x_lon = x_slon * scale;
-    vector<Type> x_lat = x_slat * scale;
+    vector<Type> x_lon(n);
+    vector<Type> x_lat(n);
+    if (dist != 0) {
+        x_lon = x_slon * scale;
+        x_lat = x_slat * scale;
+    }
 
     // Create a variable that will keep track of the negative log likelihood (nll)
     parallel_accumulator<Type> nll(this);
@@ -96,16 +100,24 @@ Type objective_function<Type>::operator() ()
     // Observation equation
     for (int i = 0; i < n; ++i) {
         if (dist == 0) {
+            // "known" observations
+            nll -= dnorm(y_lon(i), x_lon(i), Type(0.0001), true);
+            nll -= dnorm(y_lat(i), x_lat(i), Type(0.0001), true);
+        }
+        if (dist == 1) {
+            // normal distribution
             nll -= dnorm(y_lon(i), x_lon(i), alpha_lon * obs_sd_lon(i), true);
             nll -= dnorm(y_lat(i), x_lat(i), alpha_lat * obs_sd_lat(i), true);
         }
-        if (dist == 1) {
+        if (dist == 2) {
+            // t-distribution
             tmp_lon = (y_lon(i) - x_lon(i)) / (alpha_lon * tau_lon(i));
             tmp_lat = (y_lat(i) - x_lat(i)) / (alpha_lat * tau_lat(i));
             nll -=  log(1 / (alpha_lon * tau_lon(i))) + dt(tmp_lon, nu_lon(i), true);
             nll -=  log(1 / (alpha_lat * tau_lat(i))) + dt(tmp_lat, nu_lat(i), true);
         }
-        if (dist == 2) {
+        if (dist == 3) {
+            // cauchy distribution
             nll -= dcauchy(y_lon(i), x_lon(i), alpha_lon * scale_lon(i), true);
             nll -= dcauchy(y_lat(i), x_lat(i), alpha_lat * scale_lat(i), true);
         }

@@ -21,7 +21,8 @@ scale_lat for the cauchy distribution.}
 
 \item{fix_gamma}{Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?}
 
-\item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy")}
+\item{dist}{Distribution to use for observation error ("null", "normal", "t", or "cauchy").
+If "null", locations are to be "true".}
 
 \item{silent}{Disable tracing information?}
 

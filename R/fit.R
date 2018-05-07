@@ -12,7 +12,8 @@
 #' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
 #'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
 #' @param fix_gamma Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?
-#' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy")
+#' @param dist   Distribution to use for observation error ("null", "normal", "t", or "cauchy").
+#'               If "null", locations are to be "true".
 #' @param silent Disable tracing information?
 #' @param gr_threshold Stop if maximum gradient exceeds this value (large values indicate convergence issues)
 #'
@@ -50,7 +51,7 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
                      scale_lat = track$scale_lat,
                      delta_t = track$delta_t,
                      n = nrow(track),
-                     dist = as.numeric(factor(dist, levels = c("normal", "t", "cauchy"))) - 1,
+                     dist = as.numeric(factor(dist, levels = c("null", "normal", "t", "cauchy"))) - 1,
                      fix_gamma = as.numeric(fix_gamma))
 
     ## Set-up initial par values for TMB
@@ -63,15 +64,25 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
                      log_alpha_lat = 0,
                      x_slon = tmb_data$y_lon / scale,
                      x_slat = tmb_data$y_lat / scale)
+    tmb_map <- list()
 
     ## Conditional mapping
-    if (fix_gamma) {
-        tmb_map <- list(logit_gamma = rep(factor(1), length(tmb_data$y_lon)),
-                        log_sd_gamma = factor(NA))
-        tmb_random <- c("x_slon", "x_slat")
+    if (dist == "null") {
+        tmb_random <- NULL
+        tmb_map$log_alpha_lon <- factor(NA)
+        tmb_map$log_alpha_lat <- factor(NA)
+        tmb_map$x_slon <- rep(factor(NA), tmb_data$n)
+        tmb_map$x_slat <- rep(factor(NA), tmb_data$n)
     } else {
-        tmb_random <- c("logit_gamma", "x_slon", "x_slat")
-        tmb_map <- list()
+        tmb_random <- c("x_slon", "x_slat")
+        tmb_pars$x_slon <- tmb_data$y_lon / scale
+        tmb_pars$x_slat <- tmb_data$y_lat / scale
+    }
+    if (fix_gamma) {
+        tmb_map$logit_gamma <- rep(factor(1), length(tmb_data$y_lon))
+        tmb_map$log_sd_gamma <- factor(NA)
+    } else {
+        tmb_random <- c("logit_gamma", tmb_random)
     }
 
     ## Generate objective function, minimize and get parameters
