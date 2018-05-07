@@ -16,12 +16,15 @@
 #'               If "null", locations are to be "true".
 #' @param silent Disable tracing information?
 #' @param gr_threshold Stop if maximum gradient exceeds this value (large values indicate convergence issues)
+#' @param start_par List of start parameters from a simpler fit from this model (par_est in the list).
+#'                  It may be helpful to fit a simpler version of this model, then supply starting parameters
+#'                  that are closer to where they should be.
 #'
 #' @export
 #'
 
 fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent = FALSE,
-                    gr_threshold = 10) {
+                    gr_threshold = 10, start_par = NULL) {
 
     ## Center lon and lat values and scale using max deviation (or sd)
     ## this should aid convergence by scaling the x parameters
@@ -56,14 +59,18 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
-    tmb_pars <- list(logit_gamma = rep(0, length(tmb_data$y_lon)),
-                     log_sd_gamma = 0,
-                     log_sd_lon = 0,
-                     log_sd_lat = 0,
-                     log_alpha_lon = 0,
-                     log_alpha_lat = 0,
-                     x_slon = tmb_data$y_lon / scale,
-                     x_slat = tmb_data$y_lat / scale)
+    if (is.null(start_par)) {
+        tmb_pars <- list(logit_gamma = rep(0, length(tmb_data$y_lon)),
+                         log_sd_gamma = 0,
+                         log_sd_lon = 0,
+                         log_sd_lat = 0,
+                         log_alpha_lon = 0,
+                         log_alpha_lat = 0,
+                         x_slon = tmb_data$y_lon / scale,
+                         x_slat = tmb_data$y_lat / scale)
+    } else {
+        tmb_pars <- start_par
+    }
     tmb_map <- list()
 
     ## Conditional mapping
@@ -75,8 +82,6 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
         tmb_map$x_slat <- rep(factor(NA), tmb_data$n)
     } else {
         tmb_random <- c("x_slon", "x_slat")
-        tmb_pars$x_slon <- tmb_data$y_lon / scale
-        tmb_pars$x_slat <- tmb_data$y_lat / scale
     }
     if (fix_gamma) {
         tmb_map$logit_gamma <- rep(factor(1), length(tmb_data$y_lon))
@@ -136,9 +141,13 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
     main_par$par <- gsub("sd", "sigma", main_par$par)
     main_par$par <- factor(main_par$par, levels = c("log_sigma_gamma", "log_sigma_lon", "log_sigma_lat"))
 
+    ## Parameter estimates and sd
+    par_est <- as.list(sd_rep, "Est")
+    par_sd <- as.list(sd_rep, "Std")
+
     ## Return results
-    list(tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt, rep = rep, max_gr = max_gr,
-         sd_rep = sd_rep, sd_res = sd_res, AIC = AIC, track = track,
-         main_par = main_par)
+    list(call = match.call(), tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt,
+         rep = rep, max_gr = max_gr, sd_rep = sd_rep, sd_res = sd_res, AIC = AIC, track = track,
+         main_par = main_par, par_est = par_est, par_sd = par_sd)
 
 }

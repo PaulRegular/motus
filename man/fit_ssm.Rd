@@ -5,7 +5,7 @@
 \title{Function for fitting state-space movement model}
 \usage{
 fit_ssm(track, scale = "sd", fix_gamma = FALSE, dist = "t",
-  silent = FALSE, gr_threshold = 10)
+  silent = FALSE, gr_threshold = 10, start_par = NULL)
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -27,6 +27,10 @@ If "null", locations are to be "true".}
 \item{silent}{Disable tracing information?}
 
 \item{gr_threshold}{Stop if maximum gradient exceeds this value (large values indicate convergence issues)}
+
+\item{start_par}{List of start parameters from a simpler fit from this model (par_est in the list).
+It may be helpful to fit a simpler version of this model, then supply starting parameters
+that are closer to where they should be.}
 }
 \description{
 Function for fitting state-space movement model

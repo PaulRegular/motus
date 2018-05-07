@@ -44,7 +44,8 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31323", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31305", ] # cauchy worked here
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, dist = "null", fix_gamma = FALSE)
+res <- fit_ssm(track, dist = "normal", scale = 5000, fix_gamma = TRUE)
+res <- update(res, dist = "t", fix_gamma = FALSE, start_par = res$par_est)
 res$sd_rep
 hist(res$track$gamma_est, breaks = 100)
 hist(res$track$logit_gamma_est, breaks = 100)
@@ -66,17 +67,18 @@ system.time({
     success <- 0
     for (i in seq_along(ids)) {
         track <- tracks[tracks$TRANSMITTER == ids[i], ]
-        tfits[[i]] <- try(fit_ssm(track, dist = "t", scale = 5000, silent = TRUE, fix_gamma = TRUE))
+        start <- try(fit_ssm(track, dist = "normal", scale = 5000, silent = TRUE, fix_gamma = TRUE))
+        nfits[[i]] <- try(update(start, fix_gamma = FALSE, start_par = start$par_est))
+        tfits[[i]] <- try(update(nfits[[i]], dist = "t", start_par = nfits[[i]]$par_est))
         if (class(tfits[[i]]) != "try-error") success <- success + 1
-        # nfits[[i]] <- try(fit_ssm(track, dist = "normal", scale = 1000, silent = TRUE))
         # cfits[[i]] <- try(fit_ssm(track, dist = "cauchy", scale = 1000, silent = TRUE))
         cat(paste(i, "out of", length(ids), "\n"))
         cat(paste0(round(success / i * 100), "% converged\n"))
     }
 })
 
+mean(sapply(nfits, class) != "try-error")
 mean(sapply(tfits, class) != "try-error")
-# mean(sapply(nfits, class) != "try-error")
 # mean(sapply(cfits, class) != "try-error")
 
 success <- names(which(sapply(cfits, class) != "try-error"))
