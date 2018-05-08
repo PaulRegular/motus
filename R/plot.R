@@ -3,6 +3,7 @@
 #'
 #' @param track  track data.frame from \code{\link{fit_ssm}}
 #' @param title  title of plot
+#' @param discrete color movement by discrete state? If FALSE, colored by gamma
 #'
 #' @export
 #'
@@ -11,7 +12,7 @@
 #' @import plotly
 #'
 
-plot_track <- function(track, title = "") {
+plot_track <- function(track, title = "", discrete = FALSE) {
 
     # ggplot(data = track) +
     #     geom_point(aes(x = lon, y = lat), size = 1, alpha = 0.2) +
@@ -24,7 +25,11 @@ plot_track <- function(track, title = "") {
                showline = FALSE,
                showticklabels = FALSE)
 
-    track$gamma_col <- cut(track$gamma_est, breaks = seq(0, 1, 0.1))
+    if (discrete) {
+        track$gamma_col <- factor(track$state)
+    } else {
+        track$gamma_col <- cut(track$gamma_est, breaks = seq(0, 1, 0.1))
+    }
 
     plot_ly(data = track, x = ~lon, y = ~lat, colors = viridis::viridis(100)) %>%
         add_markers(size = I(2), color = I("black"), name = "Observed") %>%
@@ -56,6 +61,8 @@ plot_track <- function(track, title = "") {
 plot_trend <- function(track, y_name = "lon", xlab = "time", ylab = y_name,
                        col_est = "steelblue", col_obs = "black") {
 
+    col_est_rgb <- paste0("rgb(", paste(col2rgb(col_est), collapse = ","), ")")
+
     d <- track[, c("DATETIME", paste0(y_name, c("_est", "_lwr", "_upr")))]
     names(d) <- gsub(y_name, "y", names(d))
     if (y_name %in% names(track)) d$y <- track[, y_name]
@@ -65,7 +72,13 @@ plot_trend <- function(track, y_name = "lon", xlab = "time", ylab = y_name,
     }
     p %>% add_ribbons(ymin = ~y_lwr, ymax = ~y_upr, name = "95% CI", line = list(width = 0),
                       color = I(col_est), opacity = 0.4) %>%
-        add_lines(y = ~y_est, size = I(1), name = "Estimated", color = I(col_est)) %>%
+        add_lines(y = ~y_est, size = I(1), name = "Estimated", color = I(col_est),
+                  legendgroup = "Estimated") %>%
+        add_markers(y = ~y_est, name = "Estimated", legendgroup = "Estimated",
+                    showlegend = FALSE,
+                    marker = list(size = 5, color = "white",
+                                  line = list(color = col_est_rgb,
+                                              width = 1))) %>%
         layout(yaxis = list(title = ylab),
                xaxis = list(title = xlab))
 

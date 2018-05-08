@@ -4,8 +4,8 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, scale = "sd", fix_gamma = FALSE, dist = "t",
-  silent = FALSE, gr_threshold = 10, start_par = NULL)
+fit_ssm(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.8,
+  dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL)
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -20,6 +20,8 @@ scale_lat for the cauchy distribution.}
 "sd" scales using sd, "max" scales to max deviation, or provide a value.}
 
 \item{fix_gamma}{Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?}
+
+\item{gamma_threshold}{A threshold for defining directed or area-restricted phases of movement}
 
 \item{dist}{Distribution to use for observation error ("null", "normal", "t", or "cauchy").
 If "null", locations are to be "true".}

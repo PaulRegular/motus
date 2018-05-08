@@ -42,6 +42,7 @@ Type objective_function<Type>::operator() ()
     DATA_INTEGER(n);          // Number of records
     DATA_INTEGER(dist);       // Switch for the distribution to use for observation error
     DATA_INTEGER(fix_gamma);  // Switch for estimating fixed or time varrying gamma
+    DATA_SCALAR(logit_gamma_threshold); // Threshold for defining different phases of movement
 
     // Input parameters
     PARAMETER_VECTOR(logit_gamma);   // Autocorrelation - logit because 0 < gamma < 1
@@ -69,6 +70,9 @@ Type objective_function<Type>::operator() ()
     if (dist != 0) {
         x_lon = x_slon * scale;
         x_lat = x_slat * scale;
+    } else {
+        x_lon = y_lon; // if observations are assumed "known"
+        x_lat = y_lat;
     }
 
     // Create a variable that will keep track of the negative log likelihood (nll)
@@ -99,11 +103,6 @@ Type objective_function<Type>::operator() ()
 
     // Observation equation
     for (int i = 0; i < n; ++i) {
-        if (dist == 0) {
-            // "known" observations
-            nll -= dnorm(y_lon(i), x_lon(i), Type(0.0001), true);
-            nll -= dnorm(y_lat(i), x_lat(i), Type(0.0001), true);
-        }
         if (dist == 1) {
             // normal distribution
             nll -= dnorm(y_lon(i), x_lon(i), alpha_lon * obs_sd_lon(i), true);
@@ -123,8 +122,12 @@ Type objective_function<Type>::operator() ()
         }
     }
 
+    // Derived quantities
+    vector<Type> delta_gamma = logit_gamma_threshold - logit_gamma;
+
     ADREPORT(x_lon);
     ADREPORT(x_lat);
+    ADREPORT(delta_gamma);
 
     return nll;
 

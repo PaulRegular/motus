@@ -12,6 +12,7 @@
 #' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
 #'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
 #' @param fix_gamma Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?
+#' @param gamma_threshold  A threshold for defining directed or area-restricted phases of movement
 #' @param dist   Distribution to use for observation error ("null", "normal", "t", or "cauchy").
 #'               If "null", locations are to be "true".
 #' @param silent Disable tracing information?
@@ -23,8 +24,8 @@
 #' @export
 #'
 
-fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent = FALSE,
-                    gr_threshold = 10, start_par = NULL) {
+fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.8,
+                    dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL) {
 
     ## Center lon and lat values and scale using max deviation (or sd)
     ## this should aid convergence by scaling the x parameters
@@ -55,7 +56,8 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
                      delta_t = track$delta_t,
                      n = nrow(track),
                      dist = as.numeric(factor(dist, levels = c("null", "normal", "t", "cauchy"))) - 1,
-                     fix_gamma = as.numeric(fix_gamma))
+                     fix_gamma = as.numeric(fix_gamma),
+                     logit_gamma_threshold = log(gamma_threshold / (1 - gamma_threshold)))
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
@@ -128,6 +130,15 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, dist = "t", silent =
     track$gamma_est <- plogis(track$logit_gamma_est)
     track$gamma_lwr <- plogis(track$logit_gamma_lwr)
     track$gamma_upr <- plogis(track$logit_gamma_upr)
+
+    ## Label phases
+    ind <- names(sd_rep$value) == "delta_gamma"
+    delta_gamma_est <- sd_rep$value[ind]
+    delta_gamma_sd <- sd_rep$sd[ind]
+    delta_gamma_prob <- pnorm(0, mean = delta_gamma_est, sd = delta_gamma_sd)
+    track$state <- "uncertain"
+    track$state[delta_gamma_prob > 0.95] <- "directed"
+    track$state[1 - delta_gamma_prob > 0.95] <- "area-restricted"
 
     ## Tidy par table
     ind <- rownames(sd_res) %in% c("x_lon", "x_lat", "x_slon", "x_slat",

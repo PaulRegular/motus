@@ -4,12 +4,14 @@
 \alias{plot_track}
 \title{Plot track}
 \usage{
-plot_track(track, title = "")
+plot_track(track, title = "", discrete = FALSE)
 }
 \arguments{
 \item{track}{track data.frame from \code{\link{fit_ssm}}}
 
 \item{title}{title of plot}
+
+\item{discrete}{color movement by discrete state? If FALSE, colored by gamma}
 }
 \description{
 Plot track

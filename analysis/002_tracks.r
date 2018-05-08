@@ -17,9 +17,10 @@ tracks <- tracks[order(tracks$TRANSMITTER, tracks$DATETIME), ]   # ensure record
 ## Ensure transmitters get a unique tag
 tracks$TRANSMITTER <- paste0(tracks$array, "-", tracks$TRANSMITTER)
 
-## Discard tracks with less than n records
+## Discard tracks with less than and greater than n records
+## Tracks are difficult to fit outside this range
 tracks[, tot_fixes := .N, by = "TRANSMITTER"]
-tracks <- tracks[tracks$tot_fixes > 50, ]
+tracks <- tracks[tracks$tot_fixes > 100 & tracks$tot_fixes < 1000, ]
 
 ## Discard individuals that presumbably either died or shead the transmitter
 ## (i.e. Transmitters that remained within the array for the whole experiment)
@@ -43,19 +44,44 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53215", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31323", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2017-31305", ] # cauchy worked here
+# track <- tracks[tracks$TRANSMITTER == "Carson-2015-57098", ] # appears to have limited error
+# track <- tracks[tracks$TRANSMITTER == "Carson-2016-53139", ] # appears to have limited error
+# track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
+# track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, dist = "normal", scale = 5000, fix_gamma = TRUE)
-res <- update(res, dist = "t", fix_gamma = FALSE, start_par = res$par_est)
+res <- fit_ssm(track, dist = "normal", scale = 5000, fix_gamma = FALSE)
+# res <- update(res, dist = "normal", fix_gamma = FALSE, start_par = res$par_est)
+# res <- update(res, dist = "t", start_par = res$par_est)
 res$sd_rep
 hist(res$track$gamma_est, breaks = 100)
 hist(res$track$logit_gamma_est, breaks = 100)
 
-plot_track(res$track)
+plot_track(res$track, discrete = TRUE)
+plot_trend(res$track, y_name = "logit_gamma")
+
 p_lon <- plot_trend(res$track, y_name = "lon")
 p_lat <- plot_trend(res$track, y_name = "lat")
 p_gamma <- plot_trend(res$track, y_name = "gamma")
 subplot(p_lon, p_lat, p_gamma, nrows = 3, shareX = TRUE)
 unique(res$track$TRANSMITTER)
+
+
+ind <- names(res$sd_rep$value) == "delta_gamma"
+delta_gamma_est <- res$sd_rep$value[ind]
+delta_gamma_sd <- res$sd_rep$sd[ind]
+delta_gamma_prob <- pnorm(0, mean = delta_gamma_est, sd = delta_gamma_sd)
+
+track <- res$track
+track$directed <- delta_gamma_prob > 0.9
+track$gamma_col <- factor(track$directed)
+
+plot_ly(data = track, x = ~lon, y = ~lat, colors = viridis::viridis(100)) %>%
+    add_markers(size = I(2), color = I("black"), name = "Observed") %>%
+    add_segments(x = ~lon_est[-nrow(track)], xend = ~lon_est[-1],
+                 y = ~lat_est[-nrow(track)], yend = ~lat_est[-1],
+                 color = ~gamma_col[-nrow(track)], showlegend = TRUE,
+                 text = ~round(gamma_est[-nrow(track)], 2), name = "")
+
 
 
 system.time({
@@ -97,5 +123,9 @@ unique(res$track$TRANSMITTER)
 
 ## Add start and end label to plot_track
 ## - Also consider impose transparancy using delta_t??
-## Implement two-step optimization - allow model fitting assuming no observation error, then fit with observation error
 ## Allow for covariate effects on gamma and model error as an autocorrelated process (AR1)
+
+## Filter long time breaks? for example: "Lilly-2016-53248"
+
+
+
