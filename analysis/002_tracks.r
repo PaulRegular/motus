@@ -49,7 +49,7 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, dist = "normal", scale = 5000, fix_gamma = FALSE)
+res <- fit_ssm(track, formula = NULL, dist = "t", scale = 5000, gamma_model = "RW")
 # res <- update(res, dist = "normal", fix_gamma = FALSE, start_par = res$par_est)
 # res <- update(res, dist = "t", start_par = res$par_est)
 res$sd_rep
@@ -57,7 +57,8 @@ hist(res$track$gamma_est, breaks = 100)
 hist(res$track$logit_gamma_est, breaks = 100)
 
 plot_track(res$track, discrete = TRUE)
-plot_trend(res$track, y_name = "logit_gamma")
+plot_track(res$track, discrete = FALSE)
+plot_trend(res$track, y_name = "gamma")
 
 p_lon <- plot_trend(res$track, y_name = "lon")
 p_lat <- plot_trend(res$track, y_name = "lat")
@@ -126,6 +127,12 @@ unique(res$track$TRANSMITTER)
 ## Allow for covariate effects on gamma and model error as an autocorrelated process (AR1)
 
 ## Filter long time breaks? for example: "Lilly-2016-53248"
+
+
+## use this as a guide for setting up a model.matrix:
+## https://gitlab.oceantrack.org/otn-statistical-modelling-group/visualising-and-analysing-telemetry-data-in-r/commit/0f9da01649b9b7ff97a55bca5c2991e937141451
+
+
 
 
 

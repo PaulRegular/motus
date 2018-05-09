@@ -29,6 +29,7 @@ Type objective_function<Type>::operator() ()
     // Input data
     DATA_VECTOR(y_lon);       // Observed locations
     DATA_VECTOR(y_lat);
+    DATA_MATRIX(covariates);
     DATA_SCALAR(scale);       // used for scaling unobserved locations (x)
     DATA_VECTOR(delta_t);     // Time interval between two consecutive location
     DATA_VECTOR(obs_sd_lon);  // normal distribution observation error parameters from obs_error model
@@ -45,8 +46,9 @@ Type objective_function<Type>::operator() ()
     DATA_SCALAR(logit_gamma_threshold); // Threshold for defining different phases of movement
 
     // Input parameters
-    PARAMETER_VECTOR(logit_gamma);   // Autocorrelation - logit because 0 < gamma < 1
+    PARAMETER_VECTOR(epislon_gamma); // Error around gamma process
     PARAMETER(log_sd_gamma);         // Error for gamma random walk
+    PARAMETER_VECTOR(beta_gamma);    // Covariates for gamma
     PARAMETER(log_sd_lon);           // Process error (sd) in lon - log because sd > 0
     PARAMETER(log_sd_lat);           // Process error (sd) in lat
     PARAMETER(log_alpha_lon);        // Proportional constant for observation error > 0 (because sd > 0)
@@ -59,12 +61,12 @@ Type objective_function<Type>::operator() ()
     // Transformation of the input parameters to model format
     /* These transformations are made to insured that the parameters have sensical values.
      They do not change the model, they are only a computational trick. */
-    vector<Type> gamma = 1.0 / (1.0 + exp(-logit_gamma));      // logit-1 b/c we want 0 < gamma < 1
     Type sd_gamma = exp(log_sd_gamma);
     Type sd_lon = exp(log_sd_lon);                             // exp-log b/c we want sd > 0
     Type sd_lat = exp(log_sd_lat);
     Type alpha_lon = exp(log_alpha_lon);
     Type alpha_lat = exp(log_alpha_lat);
+    vector<Type> logit_gamma(n);
     vector<Type> x_lon(n);
     vector<Type> x_lat(n);
     if (dist != 0) {
@@ -84,9 +86,10 @@ Type objective_function<Type>::operator() ()
     Type tmp_lat;
 
     // Process equation
+    logit_gamma = covariates * beta_gamma + epislon_gamma; // set gamma as a linear function of covariates
     for (int i = 1; i < n; ++i) {
         if (fix_gamma == 0) {
-            nll -= dnorm(logit_gamma(i), logit_gamma(i - 1), delta_t(i) * sd_gamma, true);   // Assume gamma follows a random walk
+            nll -= dnorm(epislon_gamma(i), epislon_gamma(i - 1), delta_t(i) * sd_gamma, true);
         }
         if (i == 1) {
             nll -= dnorm(x_lon(i), x_lon(i - 1), delta_t(i) * sd_lon, true);             // Assume a simple random walk from the first location
@@ -127,6 +130,7 @@ Type objective_function<Type>::operator() ()
 
     ADREPORT(x_lon);
     ADREPORT(x_lat);
+    ADREPORT(logit_gamma);
     ADREPORT(delta_gamma);
 
     return nll;

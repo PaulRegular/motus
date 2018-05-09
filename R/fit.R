@@ -9,23 +9,34 @@
 #'               1) sd_lon and sd_lat for the normal distribution; 2) tau_lon, tau_lat, nu_lon,
 #'               and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
 #'               scale_lat for the cauchy distribution.
-#' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
-#'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
-#' @param fix_gamma Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?
+#' @param formula Formula describing relationship between gamma (parameter controlling autocorrelation
+#'                in the movement process) and covariates. Covariates are not used if set to NULL
+#' @param gamma_model Should the gamma parameter (autocorrelation for movement) be "fixed" or modeled
+#'                    as a random walk ("RW")?
 #' @param gamma_threshold  A threshold for defining directed or area-restricted phases of movement
-#' @param dist   Distribution to use for observation error ("null", "normal", "t", or "cauchy").
-#'               If "null", locations are to be "true".
+#' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy").
+#'               If NULL, locations are to be "true".
 #' @param silent Disable tracing information?
 #' @param gr_threshold Stop if maximum gradient exceeds this value (large values indicate convergence issues)
 #' @param start_par List of start parameters from a simpler fit from this model (par_est in the list).
 #'                  It may be helpful to fit a simpler version of this model, then supply starting parameters
 #'                  that are closer to where they should be.
+#' @param scale  Method for scaling x values to improve parameter scaling and aid convergence, where
+#'               "sd" scales using sd, "max" scales to max deviation, or provide a value.
 #'
 #' @export
 #'
 
-fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.8,
-                    dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL) {
+fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold = 0.8,
+                    dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL,
+                    scale = "sd") {
+
+    if (is.null(dist)) dist <- "null"
+    if (is.null(formula)) {
+        model_mat <- matrix(rep(0, nrow(track)), ncol = 1)
+    } else {
+        model_mat <- model.matrix(formula, data = track)
+    }
 
     ## Center lon and lat values and scale using max deviation (or sd)
     ## this should aid convergence by scaling the x parameters
@@ -44,6 +55,7 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
     ## Note: centered the coordinates aid convergance
     tmb_data <- list(y_lon = track$lon - center_lon,
                      y_lat = track$lat - center_lat,
+                     covariates = model_mat,
                      scale = scale,
                      obs_sd_lon = track$sd_lon,
                      obs_sd_lat = track$sd_lat,
@@ -56,14 +68,15 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
                      delta_t = track$delta_t,
                      n = nrow(track),
                      dist = as.numeric(factor(dist, levels = c("null", "normal", "t", "cauchy"))) - 1,
-                     fix_gamma = as.numeric(fix_gamma),
+                     fix_gamma = as.numeric(gamma_model == "fixed"),
                      logit_gamma_threshold = log(gamma_threshold / (1 - gamma_threshold)))
 
     ## Set-up initial par values for TMB
     ## Note: supplied y values for x values - key thing is that the starting locations are supplied
     if (is.null(start_par)) {
-        tmb_pars <- list(logit_gamma = rep(0, length(tmb_data$y_lon)),
+        tmb_pars <- list(epislon_gamma = rep(0, length(tmb_data$y_lon)),
                          log_sd_gamma = 0,
+                         beta_gamma = rep(0, ncol(tmb_data$covariates)),
                          log_sd_lon = 0,
                          log_sd_lat = 0,
                          log_alpha_lon = 0,
@@ -85,11 +98,15 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
     } else {
         tmb_random <- c("x_slon", "x_slat")
     }
-    if (fix_gamma) {
-        tmb_map$logit_gamma <- rep(factor(1), length(tmb_data$y_lon))
+    if (gamma_model == "fixed") {
+        tmb_map$epislon_gamma <- rep(factor(NA), length(tmb_data$y_lon))
         tmb_map$log_sd_gamma <- factor(NA)
-    } else {
-        tmb_random <- c("logit_gamma", tmb_random)
+    }
+    if (gamma_model == "RW") {
+        tmb_random <- c("epislon_gamma", tmb_random)
+    }
+    if (is.null(formula)) {
+        tmb_map$beta_gamma <- factor(NA)
     }
 
     ## Generate objective function, minimize and get parameters
@@ -113,9 +130,6 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
     xrep_lon <- sd_res[rownames(sd_res) %in% "x_lon", ]
     xrep_lat <- sd_res[rownames(sd_res) %in% "x_lat", ]
     xrep_gamma <- sd_res[rownames(sd_res) %in% "logit_gamma", ]
-    if (fix_gamma) {
-        xrep_gamma <- t(replicate(tmb_data$n, xrep_gamma))
-    }
 
     ## Save states to the data
     track$lon_est <- (xrep_lon[, 1] + mean(track$lon))
@@ -140,18 +154,6 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
     track$state[delta_gamma_prob > 0.95] <- "directed"
     track$state[1 - delta_gamma_prob > 0.95] <- "area-restricted"
 
-    ## Tidy par table
-    ind <- rownames(sd_res) %in% c("x_lon", "x_lat", "x_slon", "x_slat",
-                                   "log_alpha_lon", "log_alpha_lat", "logit_gamma")
-    main_par <- sd_res[!ind, ]
-    main_par <- data.frame(par = rownames(main_par),
-                           est = main_par[, 1], sd = main_par[, 2],
-                           stringsAsFactors = FALSE)
-    main_par$lwr <- main_par$est - 1.96 * main_par$sd
-    main_par$upr <- main_par$est + 1.96 * main_par$sd
-    main_par$par <- gsub("sd", "sigma", main_par$par)
-    main_par$par <- factor(main_par$par, levels = c("log_sigma_gamma", "log_sigma_lon", "log_sigma_lat"))
-
     ## Parameter estimates and sd
     par_est <- as.list(sd_rep, "Est")
     par_sd <- as.list(sd_rep, "Std")
@@ -159,6 +161,6 @@ fit_ssm <- function(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.
     ## Return results
     list(call = match.call(), tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt,
          rep = rep, max_gr = max_gr, sd_rep = sd_rep, sd_res = sd_res, AIC = AIC, track = track,
-         main_par = main_par, par_est = par_est, par_sd = par_sd)
+         par_est = par_est, par_sd = par_sd)
 
 }

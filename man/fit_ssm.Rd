@@ -4,8 +4,9 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, scale = "sd", fix_gamma = FALSE, gamma_threshold = 0.8,
-  dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL)
+fit_ssm(track, formula = NULL, gamma_model = "RW", gamma_threshold = 0.8,
+  dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL,
+  scale = "sd")
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -16,15 +17,16 @@ the minimum sampling interval and named delta_t. Observation error should be lab
 and nu_lat for the parameters for the t-distribution; and, 3) scale_lon and
 scale_lat for the cauchy distribution.}
 
-\item{scale}{Method for scaling x values to improve parameter scaling and aid convergence, where
-"sd" scales using sd, "max" scales to max deviation, or provide a value.}
+\item{formula}{Formula describing relationship between gamma (parameter controlling autocorrelation
+in the movement process) and covariates. Covariates are not used if set to NULL}
 
-\item{fix_gamma}{Should the gamma parameter (autocorrelation for movement) be fixed or time-varrying?}
+\item{gamma_model}{Should the gamma parameter (autocorrelation for movement) be "fixed" or modeled
+as a random walk ("RW")?}
 
 \item{gamma_threshold}{A threshold for defining directed or area-restricted phases of movement}
 
-\item{dist}{Distribution to use for observation error ("null", "normal", "t", or "cauchy").
-If "null", locations are to be "true".}
+\item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy").
+If NULL, locations are to be "true".}
 
 \item{silent}{Disable tracing information?}
 
@@ -33,6 +35,9 @@ If "null", locations are to be "true".}
 \item{start_par}{List of start parameters from a simpler fit from this model (par_est in the list).
 It may be helpful to fit a simpler version of this model, then supply starting parameters
 that are closer to where they should be.}
+
+\item{scale}{Method for scaling x values to improve parameter scaling and aid convergence, where
+"sd" scales using sd, "max" scales to max deviation, or provide a value.}
 }
 \description{
 Function for fitting state-space movement model
