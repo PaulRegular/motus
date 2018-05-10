@@ -11,8 +11,8 @@
 #'               scale_lat for the cauchy distribution.
 #' @param formula Formula describing relationship between gamma (parameter controlling autocorrelation
 #'                in the movement process) and covariates. Covariates are not used if set to NULL
-#' @param gamma_model Should the gamma parameter (autocorrelation for movement) be "fixed" or modeled
-#'                    as a random walk ("RW")?
+#' @param gamma_model Should the gamma parameter (autocorrelation for movement) be "fixed", modeled
+#'                    as a random walk ("RW") or an "AR1" process?
 #' @param gamma_threshold  A threshold for defining directed or area-restricted phases of movement
 #' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy").
 #'               If NULL, locations are to be "true".
@@ -76,6 +76,7 @@ fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold 
     if (is.null(start_par)) {
         tmb_pars <- list(epislon_gamma = rep(0, length(tmb_data$y_lon)),
                          log_sd_gamma = 0,
+                         logit_phi_gamma = 0,
                          beta_gamma = rep(0, ncol(tmb_data$covariates)),
                          log_sd_lon = 0,
                          log_sd_lat = 0,
@@ -101,8 +102,14 @@ fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold 
     if (gamma_model == "fixed") {
         tmb_map$epislon_gamma <- rep(factor(NA), length(tmb_data$y_lon))
         tmb_map$log_sd_gamma <- factor(NA)
+        tmb_map$logit_phi_gamma <- factor(NA)
     }
     if (gamma_model == "RW") {
+        tmb_map$logit_phi_gamma <- factor(NA)
+        tmb_pars$logit_phi_gamma <- Inf
+        tmb_random <- c("epislon_gamma", tmb_random)
+    }
+    if (gamma_model == "AR1") {
         tmb_random <- c("epislon_gamma", tmb_random)
     }
     if (is.null(formula)) {

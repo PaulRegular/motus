@@ -47,7 +47,8 @@ Type objective_function<Type>::operator() ()
 
     // Input parameters
     PARAMETER_VECTOR(epislon_gamma); // Error around gamma process
-    PARAMETER(log_sd_gamma);         // Error for gamma random walk
+    PARAMETER(log_sd_gamma);         // Error for gamma random walk or AR1
+    PARAMETER(logit_phi_gamma);      // Autocorrelation parameter for gamma
     PARAMETER_VECTOR(beta_gamma);    // Covariates for gamma
     PARAMETER(log_sd_lon);           // Process error (sd) in lon - log because sd > 0
     PARAMETER(log_sd_lat);           // Process error (sd) in lat
@@ -62,7 +63,8 @@ Type objective_function<Type>::operator() ()
     /* These transformations are made to insured that the parameters have sensical values.
      They do not change the model, they are only a computational trick. */
     Type sd_gamma = exp(log_sd_gamma);
-    Type sd_lon = exp(log_sd_lon);                             // exp-log b/c we want sd > 0
+    Type phi_gamma = 1.0 / (1.0 + exp(-logit_phi_gamma));
+    Type sd_lon = exp(log_sd_lon);
     Type sd_lat = exp(log_sd_lat);
     Type alpha_lon = exp(log_alpha_lon);
     Type alpha_lat = exp(log_alpha_lat);
@@ -89,7 +91,7 @@ Type objective_function<Type>::operator() ()
     logit_gamma = covariates * beta_gamma + epislon_gamma; // set gamma as a linear function of covariates
     for (int i = 1; i < n; ++i) {
         if (fix_gamma == 0) {
-            nll -= dnorm(epislon_gamma(i), epislon_gamma(i - 1), delta_t(i) * sd_gamma, true);
+            nll -= dnorm(epislon_gamma(i), phi_gamma * epislon_gamma(i - 1), delta_t(i) * sd_gamma, true);
         }
         if (i == 1) {
             nll -= dnorm(x_lon(i), x_lon(i - 1), delta_t(i) * sd_lon, true);             // Assume a simple random walk from the first location

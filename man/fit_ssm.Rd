@@ -20,8 +20,8 @@ scale_lat for the cauchy distribution.}
 \item{formula}{Formula describing relationship between gamma (parameter controlling autocorrelation
 in the movement process) and covariates. Covariates are not used if set to NULL}
 
-\item{gamma_model}{Should the gamma parameter (autocorrelation for movement) be "fixed" or modeled
-as a random walk ("RW")?}
+\item{gamma_model}{Should the gamma parameter (autocorrelation for movement) be "fixed", modeled
+as a random walk ("RW") or an "AR1" process?}
 
 \item{gamma_threshold}{A threshold for defining directed or area-restricted phases of movement}
 
