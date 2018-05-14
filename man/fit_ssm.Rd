@@ -5,8 +5,8 @@
 \title{Function for fitting state-space movement model}
 \usage{
 fit_ssm(track, formula = NULL, gamma_model = "RW", gamma_threshold = 0.8,
-  dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL,
-  scale = "sd")
+  gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
+  start_par = NULL, scale = "sd")
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -38,6 +38,9 @@ that are closer to where they should be.}
 
 \item{scale}{Method for scaling x values to improve parameter scaling and aid convergence, where
 "sd" scales using sd, "max" scales to max deviation, or provide a value.}
+
+\item{gamma_prop}{Probability of being considered above or below gamma_threshold value
+(i.e. "directed" or "area-restricted")}
 }
 \description{
 Function for fitting state-space movement model

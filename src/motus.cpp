@@ -92,10 +92,17 @@ Type objective_function<Type>::operator() ()
     for (int i = 1; i < n; ++i) {
         if (fix_gamma == 0) {
             nll -= dnorm(epislon_gamma(i), phi_gamma * epislon_gamma(i - 1), delta_t(i) * sd_gamma, true);
+            SIMULATE{
+                epislon_gamma(i) = rnorm(phi_gamma * epislon_gamma(i - 1), delta_t(i) * sd_gamma);
+            }
         }
         if (i == 1) {
             nll -= dnorm(x_lon(i), x_lon(i - 1), delta_t(i) * sd_lon, true);             // Assume a simple random walk from the first location
             nll -= dnorm(x_lat(i), x_lat(i - 1), delta_t(i) * sd_lat, true);
+            SIMULATE{
+                x_lon(i) = rnorm(x_lon(i - 1), delta_t(i) * sd_lon);
+                x_lat(i) = rnorm(x_lat(i - 1), delta_t(i) * sd_lat);
+            }
         }
         if (i >= 2) {
             tmp_gamma = 1.0 / (1.0 + exp(-logit_gamma(i)));
@@ -103,6 +110,10 @@ Type objective_function<Type>::operator() ()
             tmp_lat = x_lat(i - 1) + tmp_gamma * (delta_t(i)/delta_t(i - 1)) * (x_lat(i - 1) - x_lat(i - 2));
             nll -= dnorm(x_lon(i), tmp_lon, delta_t(i) * sd_lon, true);
             nll -= dnorm(x_lat(i), tmp_lat, delta_t(i) * sd_lat, true);
+            SIMULATE{
+                x_lon(i) = rnorm(tmp_lon, delta_t(i) * sd_lon);
+                x_lat(i) = rnorm(tmp_lat, delta_t(i) * sd_lat);
+            }
         }
     }
 
@@ -112,6 +123,10 @@ Type objective_function<Type>::operator() ()
             // normal distribution
             nll -= dnorm(y_lon(i), x_lon(i), alpha_lon * obs_sd_lon(i), true);
             nll -= dnorm(y_lat(i), x_lat(i), alpha_lat * obs_sd_lat(i), true);
+            SIMULATE{
+                y_lon(i) = rnorm(x_lon(i), alpha_lon * obs_sd_lon(i));
+                y_lat(i) = rnorm(x_lat(i), alpha_lat * obs_sd_lat(i));
+            }
         }
         if (dist == 2) {
             // t-distribution
@@ -119,9 +134,15 @@ Type objective_function<Type>::operator() ()
             tmp_lat = (y_lat(i) - x_lat(i)) / (alpha_lat * tau_lat(i));
             nll -=  log(1 / (alpha_lon * tau_lon(i))) + dt(tmp_lon, nu_lon(i), true);
             nll -=  log(1 / (alpha_lat * tau_lat(i))) + dt(tmp_lat, nu_lat(i), true);
+            SIMULATE{
+                tmp_lon = log(1 / (alpha_lon * tau_lon(i))) + rt(nu_lon(i));
+                tmp_lat = log(1 / (alpha_lat * tau_lat(i))) + rt(nu_lat(i));
+                y_lon(i) = (tmp_lon * alpha_lon * tau_lon(i)) + x_lon(i);
+                y_lat(i) = (tmp_lat * alpha_lat * tau_lat(i)) + x_lat(i);
+            }
         }
         if (dist == 3) {
-            // cauchy distribution
+            // cauchy distribution (SIMULATE not implemented)
             nll -= dcauchy(y_lon(i), x_lon(i), alpha_lon * scale_lon(i), true);
             nll -= dcauchy(y_lat(i), x_lat(i), alpha_lat * scale_lat(i), true);
         }
@@ -134,6 +155,14 @@ Type objective_function<Type>::operator() ()
     ADREPORT(x_lat);
     ADREPORT(logit_gamma);
     ADREPORT(delta_gamma);
+
+    SIMULATE{
+        REPORT(y_lon);
+        REPORT(y_lat);
+        REPORT(x_lon);
+        REPORT(x_lat);
+        REPORT(epislon_gamma);
+    }
 
     return nll;
 

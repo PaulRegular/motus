@@ -51,6 +51,9 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
+res <- fit_ssm(track, scale = 5000, dist = "t")
+
+
 res <- fit_ssm(track[track$time_since_release < 24 * 2, ],
                formula = ~ time_since_release, dist = "normal",
                scale = 5000, gamma_model = "fixed")
@@ -70,6 +73,13 @@ p_lat <- plot_trend(res$track, y_name = "lat")
 p_gamma <- plot_trend(res$track, y_name = "gamma")
 subplot(p_lon, p_lat, p_gamma, nrows = 3, shareX = TRUE)
 unique(res$track$TRANSMITTER)
+
+## Test SIMULATE
+track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
+res <- fit_ssm(track, scale = 5000, dist = "t")
+sim <- sim_ssm(res)
+plot(obs_lat ~ obs_lon, data = sim, asp = 1, pch = 16, col = rgb(1, 0, 0, 0.5), cex = 0.5)
+lines(sim$true_lon, sim$true_lat)
 
 
 # ind <- names(res$sd_rep$value) == "delta_gamma"

@@ -14,6 +14,8 @@
 #' @param gamma_model Should the gamma parameter (autocorrelation for movement) be "fixed", modeled
 #'                    as a random walk ("RW") or an "AR1" process?
 #' @param gamma_threshold  A threshold for defining directed or area-restricted phases of movement
+#' @param gamma_prop       Probability of being considered above or below gamma_threshold value
+#'                         (i.e. "directed" or "area-restricted")
 #' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy").
 #'               If NULL, locations are to be "true".
 #' @param silent Disable tracing information?
@@ -28,8 +30,8 @@
 #'
 
 fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold = 0.8,
-                    dist = "t", silent = FALSE, gr_threshold = 10, start_par = NULL,
-                    scale = "sd") {
+                    gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
+                    start_par = NULL, scale = "sd") {
 
     if (is.null(dist)) dist <- "null"
     if (is.null(formula)) {
@@ -158,16 +160,37 @@ fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold 
     delta_gamma_sd <- sd_rep$sd[ind]
     delta_gamma_prob <- pnorm(0, mean = delta_gamma_est, sd = delta_gamma_sd)
     track$state <- "uncertain"
-    track$state[delta_gamma_prob > 0.95] <- "directed"
-    track$state[1 - delta_gamma_prob > 0.95] <- "area-restricted"
+    track$state[delta_gamma_prob > gamma_prob] <- "directed"
+    track$state[1 - delta_gamma_prob > gamma_prob] <- "area-restricted"
 
     ## Parameter estimates and sd
     par_est <- as.list(sd_rep, "Est")
     par_sd <- as.list(sd_rep, "Std")
 
     ## Return results
-    list(call = match.call(), tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt,
+    list(call = match.call(), tmb_data = tmb_data, tmb_pars = tmb_pars, opt = opt, obj = obj,
          rep = rep, max_gr = max_gr, sd_rep = sd_rep, sd_res = sd_res, AIC = AIC, track = track,
          par_est = par_est, par_sd = par_sd)
 
 }
+
+
+
+
+#' Simulate a track using parameters estimated by state-space model
+#'
+#' @param model Object produced by \code{\link{fit_ssm}}
+#'
+#' @details Essentially a wrapper for \code{model$obj$simulate()}
+#'
+#' @export
+#'
+
+sim_ssm <- function(model) {
+    if (model$call$dist == "cauchy") stop("Simulation not yet implemented for the cauchy option")
+    sim <- model$obj$simulate()
+    data.frame(DATETIME = model$track$DATETIME,
+               obs_lon = sim$y_lon, obs_lat = sim$y_lat,
+               true_lon = sim$x_lon, true_lat = sim$x_lat)
+}
+
