@@ -28,10 +28,11 @@
 #'
 #' @export
 #'
+#'
 
 fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold = 0.8,
                     gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
-                    start_par = NULL, scale = "sd") {
+                    start_par = NULL, scale = "sd", mcmc_opts = NULL) {
 
     if (is.null(dist)) dist <- "null"
     if (is.null(formula)) {
@@ -194,3 +195,20 @@ sim_ssm <- function(model) {
                true_lon = sim$x_lon, true_lat = sim$x_lat)
 }
 
+
+
+#' Draw MCMC samples from state-space model
+#'
+#' @param model Object produced by \code{\link{fit_ssm}}
+#' @param ... Additional arguments to pass to \code{\link{tmbstan::tmbstan}}
+#'
+#' @details Simple wrapper for \code{\link{tmbstan::tmbstan}}
+#'
+#' @export
+#'
+#' @import tmbstan
+#'
+
+samp_ssm <- function(model, ...) {
+    tmbstan::tmbstan(model$obj, ...)
+}

@@ -8,6 +8,7 @@
 
 // modified by Paul Regular to fit to accoustic telemetry data
 
+#define TMB_LIB_INIT R_init_motus
 #include <TMB.hpp>
 
 template<class Type>

@@ -4,6 +4,7 @@ library(TMB)
 library(data.table)
 library(motus)
 library(plotly)
+library(tmbstan)
 
 ## Simplify data name
 tracks <- crab_dat
@@ -53,7 +54,6 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
 res <- fit_ssm(track, scale = 5000, dist = "t")
 
-
 res <- fit_ssm(track[track$time_since_release < 24 * 2, ],
                formula = ~ time_since_release, dist = "normal",
                scale = 5000, gamma_model = "fixed")
@@ -80,6 +80,17 @@ res <- fit_ssm(track, scale = 5000, dist = "t")
 sim <- sim_ssm(res)
 plot(obs_lat ~ obs_lon, data = sim, asp = 1, pch = 16, col = rgb(1, 0, 0, 0.5), cex = 0.5)
 lines(sim$true_lon, sim$true_lat)
+
+## Test mcmc
+track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
+res <- fit_ssm(track, scale = 5000, dist = "t")
+samps <- samp_ssm(res, chains = 3)
+# par(mar = c(1,1,1,1))
+# pairs(samps, pairs = names(res$obj$par))
+traceplot(samps, pars = names(res$obj$par), inc_warmup = TRUE)
+## doesn't look good. Would need to increase burn-in and number of iterations
+
+
 
 
 # ind <- names(res$sd_rep$value) == "delta_gamma"
@@ -141,7 +152,6 @@ lines(sim$true_lon, sim$true_lat)
 ## - Also consider impose transparancy using delta_t??
 ## Consider estimating angular parameter (random walk?)
 ## Filter long time breaks? for example: "Lilly-2016-53248"
-
 
 
 
