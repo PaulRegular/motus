@@ -32,7 +32,7 @@
 
 fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold = 0.8,
                     gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
-                    start_par = NULL, scale = "sd", mcmc_opts = NULL) {
+                    start_par = NULL, scale = "sd") {
 
     if (is.null(dist)) dist <- "null"
     if (is.null(formula)) {
@@ -192,7 +192,8 @@ sim_ssm <- function(model) {
     sim <- model$obj$simulate()
     data.frame(DATETIME = model$track$DATETIME,
                obs_lon = sim$y_lon, obs_lat = sim$y_lat,
-               true_lon = sim$x_lon, true_lat = sim$x_lat)
+               true_lon = sim$x_lon, true_lat = sim$x_lat,
+               epislon_gamma = sim$epislon_gamma)
 }
 
 

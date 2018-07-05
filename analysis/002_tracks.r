@@ -52,7 +52,9 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, scale = 5000, dist = "t")
+res <- fit_ssm(track, scale = 5000, dist = "normal", gamma_prob = 0.6)
+plot_track(res$track, discrete = FALSE)
+
 
 res <- fit_ssm(track[track$time_since_release < 24 * 2, ],
                formula = ~ time_since_release, dist = "normal",
@@ -80,6 +82,7 @@ res <- fit_ssm(track, scale = 5000, dist = "t")
 sim <- sim_ssm(res)
 plot(obs_lat ~ obs_lon, data = sim, asp = 1, pch = 16, col = rgb(1, 0, 0, 0.5), cex = 0.5)
 lines(sim$true_lon, sim$true_lat)
+plot(plogis(sim$epislon_gamma), type = "b")
 
 ## Test mcmc
 track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]

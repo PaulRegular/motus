@@ -110,14 +110,17 @@ crab_dat$exposure[ind] <- crab_dat$exposure_weeks[ind] <- "adjustment"
 
 ## Visual checks
 library(plotly)
-year_plot <- function(yr = 2015) {
-    plot_ly(data = crab_dat[year == yr, ],
+year_plot <- function(yr = 2015, loc = c("Carson", "Lilly")) {
+    plot_ly(data = crab_dat[year == yr & location %in% loc, ],
             x = ~DATETIME, y = ~TRANSMITTER, color = ~exposure_weeks) %>%
         add_markers()
 }
-year_plot(2015)
-year_plot(2016)
-year_plot(2017)
+year_plot(yr = 2015)
+year_plot(yr = 2016)
+year_plot(yr = 2017)
+year_plot(yr = 2015, loc = "Carson")
+year_plot(yr = 2016, loc = "Carson")
+year_plot(yr = 2017, loc = "Carson")
 
 ## Keep adjustment period for explorations of flight responses...or exclude
 # crab_dat <- crab_dat[crab_dat$exposure != "adjustment" | crab_dat$exposure_weeks != "adjustment", ]
