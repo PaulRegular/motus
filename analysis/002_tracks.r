@@ -11,7 +11,10 @@ tracks <- crab_dat
 
 ## Load observation error predictions from obs_error model estimates
 obs_sd <- readRDS("analysis/obs_error.rds")
-tracks$array_n <- factor(paste0(tracks$array, "-", tracks$n), levels = levels(obs_sd$array_n))
+tracks$n_caped <- tracks$n
+tracks$n_caped[tracks$n_caped > 10] <- 10  # cap n at 10 to correspond with obs_sd estimates
+tracks$array_n <- factor(paste0(tracks$array, "-", tracks$n_caped),
+                         levels = levels(obs_sd$array_n))
 tracks <- merge(tracks, obs_sd, by = "array_n")            # add obs_sd estimates to track data
 tracks <- tracks[order(tracks$TRANSMITTER, tracks$DATETIME), ]   # ensure records are ordered by transmitter then time
 tracks$time_since_release <- tracks$DATETIME - tracks$release_date_time
@@ -23,7 +26,8 @@ tracks$TRANSMITTER <- paste0(tracks$array, "-", tracks$TRANSMITTER)
 ## Discard tracks with less than and greater than n records
 ## Tracks are difficult to fit outside this range
 tracks[, tot_fixes := .N, by = "TRANSMITTER"]
-tracks <- tracks[tracks$tot_fixes > 100 & tracks$tot_fixes < 1000, ]
+# tracks <- tracks[tracks$tot_fixes > 100 & tracks$tot_fixes < 1000, ]
+tracks <- tracks[tracks$tot_fixes > 100, ]
 
 ## Discard individuals that presumbably either died or shead the transmitter
 ## (i.e. Transmitters that remained within the array for the whole experiment)
@@ -52,9 +56,11 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, scale = 5000, dist = "normal", gamma_prob = 0.6)
+res <- fit_ssm(track, scale = 5000, dist = "t", gamma_prob = 0.6)
+plot_track(res$track, discrete = TRUE)
 plot_track(res$track, discrete = FALSE)
-
+plot_trend(res$track, y_name = "gamma")
+plot_trend(res$track, y_name = "logit_gamma")
 
 res <- fit_ssm(track[track$time_since_release < 24 * 2, ],
                formula = ~ time_since_release, dist = "normal",
@@ -64,11 +70,6 @@ res <- fit_ssm(track[track$time_since_release < 24 * 2, ],
 res$sd_rep
 hist(res$track$gamma_est, breaks = 100)
 hist(res$track$logit_gamma_est, breaks = 100)
-
-plot_track(res$track, discrete = TRUE)
-plot_track(res$track, discrete = FALSE)
-plot_trend(res$track, y_name = "gamma")
-plot_trend(res$track, y_name = "logit_gamma")
 
 p_lon <- plot_trend(res$track, y_name = "lon")
 p_lat <- plot_trend(res$track, y_name = "lat")
