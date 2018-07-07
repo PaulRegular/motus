@@ -103,7 +103,7 @@ fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold 
         tmb_random <- c("x_slon", "x_slat")
     }
     if (gamma_model == "fixed") {
-        tmb_map$epislon_gamma <- rep(factor(NA), length(tmb_data$y_lon))
+        tmb_map$epislon_gamma <- rep(factor(1), length(tmb_data$y_lon))
         tmb_map$log_sd_gamma <- factor(NA)
         tmb_map$logit_phi_gamma <- factor(NA)
     }

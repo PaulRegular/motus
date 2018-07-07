@@ -57,6 +57,7 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
 res <- fit_ssm(track, scale = 5000, dist = "t", gamma_prob = 0.6)
+# res <- fit_ssm(track, dist = "normal", scale = 5000, gamma_model = "fixed")
 plot_track(res$track, discrete = TRUE)
 plot_track(res$track, discrete = FALSE)
 plot_trend(res$track, y_name = "gamma")
@@ -93,6 +94,28 @@ samps <- samp_ssm(res, chains = 3)
 # pairs(samps, pairs = names(res$obj$par))
 traceplot(samps, pars = names(res$obj$par), inc_warmup = TRUE)
 ## doesn't look good. Would need to increase burn-in and number of iterations
+
+
+test.tracks<-unique(tracks$TRANSMITTER)
+counter<-0
+for(aa in 1:length(test.tracks)){
+    track<-tracks[tracks$TRANSMITTER==test.tracks[aa],]
+
+    ##use tryCatch to let us move past errors in a loop of multiple tags
+
+    tryCatch({res <- fit_ssm(track, dist = "normal", scale = 5000, gamma_model = "fixed")
+    counter<-counter+1
+    ##ifelse(nrow(all.track>0), all.track<-rbind(all.track, res$track),all.track<-res$track)
+    ifelse(counter==1, all.track<-res$track, all.track<-rbind(all.track, res$track))
+    print("done successfully")
+    print(paste("counter:", counter, sep=" "))
+
+
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}##end aa loop
+
+save(all.track, file="all.tracks.ssm.normal.fixed.RData")
+
 
 
 
