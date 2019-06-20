@@ -13,6 +13,21 @@ Type dcauchy(Type x, Type location, Type scale, int give_log){
 }
 VECTORIZE4_ttti(dcauchy);
 
+// Modification of Anders Nielsen's code
+template<class Type>
+Type drobust(Type x, Type mean, Type sd, Type p, Type df, int give_log = 0){
+    Type z = (x - mean) / sd;
+    Type logres = log(Type(1.0) / sd * ((1.0 - p) *
+        dnorm(z, Type(0.0), Type(1.0), false) + p * dt(z, df, false)));
+    if(!give_log){
+        return exp(logres);
+    }else{
+        return logres;
+    }
+}
+VECTORIZE6_ttttti(drobust);
+
+
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
@@ -83,6 +98,30 @@ Type objective_function<Type>::operator() ()
 
       REPORT(scale_lon);
       REPORT(scale_lat);
+
+  }
+
+  if (dist == 3) { // normal - t mixture
+
+      PARAMETER_VECTOR(log_sd_lon);
+      PARAMETER_VECTOR(log_sd_lat);
+      PARAMETER_VECTOR(logit_p); // proportion t
+      PARAMETER_VECTOR(log_df);  // degrees of freedom
+
+      vector<Type> sd_lon = exp(log_sd_lon);
+      vector<Type> sd_lat = exp(log_sd_lat);
+      vector<Type> p = 1.0 / (1.0 + exp(-logit_p));
+      vector<Type> df = exp(log_df);
+
+      for(int i = 0; i < lon.size(); ++i){
+          nll -= drobust(lon(i), mu, sd_lon(n_i(i)), p(n_i(i)), df(n_i(i)), true);
+          nll -= drobust(lat(i), mu, sd_lat(n_i(i)), p(n_i(i)), df(n_i(i)), true);
+      }
+
+      REPORT(sd_lon);
+      REPORT(sd_lat);
+      REPORT(p);
+      REPORT(df);
 
   }
 

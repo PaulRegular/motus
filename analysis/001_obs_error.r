@@ -52,11 +52,14 @@ tmb_pars <- list(log_sd_lon = rep(0, length(unique(tmb_data$n_i))),
                  log_tau_lat = rep(0, length(unique(tmb_data$n_i))),
                  log_nu_lat = rep(log(3), length(unique(tmb_data$n_i))),
                  log_scale_lon = rep(0, length(unique(tmb_data$n_i))),
-                 log_scale_lat = rep(0, length(unique(tmb_data$n_i))))
+                 log_scale_lat = rep(0, length(unique(tmb_data$n_i))),
+                 logit_p = rep(0, length(unique(tmb_data$n_i))),
+                 log_df = rep(log(3), length(unique(tmb_data$n_i))))
 
 ## df fixed to 3 to account for heavy tails while maintaining statistical properities (mean, sd, etc.)
 tmb_map <- list(log_nu_lon = rep(factor(NA), length(tmb_pars$log_nu_lon)),
-                log_nu_lat = rep(factor(NA), length(tmb_pars$log_nu_lat)))
+                log_nu_lat = rep(factor(NA), length(tmb_pars$log_nu_lat)),
+                logit_p = factor(rep(NA, length(tmb_pars$logit_p)))) # assume p = 50%
 str(tmb_data)
 str(tmb_pars)
 
@@ -81,7 +84,7 @@ sdrep
 
 tmb_data$dist <- 1
 obj <- MakeADFun(tmb_data, tmb_pars[c("log_tau_lon", "log_nu_lon", "log_tau_lat", "log_nu_lat")],
-                 DLL = "obs_error", map = tmb_map)
+                 DLL = "obs_error", map = tmb_map[c("log_nu_lon", "log_nu_lat")])
 
 ## Minimize the objective function using nlminb in R
 opt <- nlminb(obj$par, obj$fn, obj$gr,
@@ -103,6 +106,20 @@ dcauchy_rep <- obj$report()
 sdrep <- sdreport(obj)
 sdrep
 
+## Fit normal-t mixture --------------------------------------------------------
+
+tmb_data$dist <- 3
+obj <- MakeADFun(tmb_data, tmb_pars[c("log_sd_lon", "log_sd_lat", "logit_p", "log_df")],
+                 map = tmb_map["logit_p"], DLL = "obs_error")
+
+## Minimize the objective function using nlminb in R
+opt <- nlminb(obj$par, obj$fn, obj$gr,
+              control = list(eval.max = 2000, iter.max = 2000))
+drobust_rep <- obj$report()
+sdrep <- sdreport(obj)
+sdrep
+
+
 ## Compile results -------------------------------------------------------------
 
 ## Table
@@ -111,7 +128,10 @@ obs_error <- data.frame(array_n = levels(dat$array_n),
                         tau_lon = dt_rep$tau_lon, nu_lon = dt_rep$nu_lon,
                         tau_lat = dt_rep$tau_lat, nu_lat = dt_rep$nu_lat,
                         scale_lon = dcauchy_rep$scale_lon,
-                        scale_lat = dcauchy_rep$scale_lat)
+                        scale_lat = dcauchy_rep$scale_lat,
+                        robust_sd_lon = drobust_rep$sd_lon, robust_sd_lat = drobust_rep$sd_lat,
+                        p = drobust_rep$p,
+                        df = drobust_rep$df)
 array_n <- do.call(rbind, strsplit(as.character(obs_error$array_n), "-"))
 obs_error$location <- array_n[, 1]
 obs_error$year <- as.numeric(array_n[, 2])
@@ -129,7 +149,21 @@ ggplot(obs_error, aes(x = n)) +
 ggplot(obs_error, aes(x = n)) +
     geom_point(aes(y = scale_lon)) +
     facet_grid(location ~ year)
+ggplot(obs_error, aes(x = n)) +
+    geom_point(aes(y = robust_sd_lon)) +
+    facet_grid(location ~ year)
+ggplot(obs_error, aes(x = n)) +
+    geom_point(aes(y = robust_sd_lat)) +
+    facet_grid(location ~ year)
+ggplot(obs_error, aes(x = n)) +
+    geom_point(aes(y = p)) +
+    facet_grid(location ~ year)
+ggplot(obs_error, aes(x = n)) +
+    geom_point(aes(y = df)) +
+    facet_grid(location ~ year)
 obs_error[, c("location", "year", "n")] <- NULL
 saveRDS(obs_error, file = "analysis/obs_error.rds")
+
+## Estimate one proportion? Fix proportion? Fix df? (Maybe it's best to try it first on several tracks?)
 
 

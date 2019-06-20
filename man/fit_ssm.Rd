@@ -4,9 +4,10 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, formula = NULL, gamma_model = "RW", gamma_threshold = 0.8,
-  gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
-  start_par = NULL, scale = "sd")
+fit_ssm(track, formula = NULL, gamma_model = "RW",
+  gamma_threshold = 0.8, gamma_prob = 0.95, dist = "t",
+  silent = FALSE, gr_threshold = 10, start_par = NULL,
+  scale = "sd")
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
