@@ -26,7 +26,8 @@ as a random walk ("RW") or an "AR1" process?}
 
 \item{gamma_threshold}{A threshold for defining directed or area-restricted phases of movement}
 
-\item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy").
+\item{dist}{Distribution to use for observation error ("null", "normal", "t", "cauchy", "robust").
+The "robust" option is a mixture of the normal and t distributions.
 If NULL, locations are to be "true".}
 
 \item{silent}{Disable tracing information?}

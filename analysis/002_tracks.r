@@ -56,7 +56,7 @@ track <- tracks[tracks$TRANSMITTER == "Carson-2015-57081", ]
 # track <- tracks[tracks$TRANSMITTER == "Carson-2016-53214", ] # normal works
 # track <- tracks[tracks$TRANSMITTER == "Lilly-2016-53248", ] # large time breaks
 # track <- tracks[tracks$TRANSMITTER == sample(unique(tracks$TRANSMITTER), 1), ]
-res <- fit_ssm(track, scale = 5000, dist = "t", gamma_prob = 0.6)
+res <- fit_ssm(track, scale = "sd", dist = "normal", gamma_model = "fixed")
 # res <- fit_ssm(track, dist = "normal", scale = 5000, gamma_model = "fixed")
 plot_track(res$track, discrete = TRUE)
 plot_track(res$track, discrete = FALSE)
