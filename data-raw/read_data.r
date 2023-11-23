@@ -32,6 +32,7 @@ sync_tags <- unique(as.numeric(sync_tags))
 
 ## Calculate deviations from the sync locations
 sync_dat <- dat[dat$TRANSMITTER %in% sync_tags, ]
+sync_dat <- sync_dat[!is.na(sync_dat$DATETIME), ]
 sync_loc <- sync_dat[, list(mean_easting = mean(easting, na.rm = TRUE),
                             mean_northing = mean(northing, na.rm = TRUE)),
                      by = c("array", "TRANSMITTER")]
@@ -46,8 +47,8 @@ sync_dat <- sync_dat[, c("TRANSMITTER", "DATETIME", "LAT", "LON", "n", "HPE", "H
                      with = FALSE]
 
 ## Save sync tag data
-save(sync_dat, file = "data/sync_dat.RData")
-save(sync_loc, file = "data/sync_loc.RData") # also save mean locations
+usethis::use_data(sync_dat, overwrite = TRUE)
+usethis::use_data(sync_loc, overwrite = TRUE) # also save mean locations
 
 ## Now process the crab data and save
 crab_dat <- dat[!dat$TRANSMITTER %in% sync_tags,
@@ -70,6 +71,7 @@ crab_dat <- merge(crab_dat, metadata, by = "TRANSMITTER")
 
 ## Ensure data is ordered by id then time
 crab_dat <- crab_dat[order(crab_dat$year, crab_dat$array, crab_dat$TRANSMITTER, crab_dat$DATETIME), ]
+crab_dat <- crab_dat[!is.na(crab_dat$DATETIME), ]
 
 ## Add seismic exposure times
 starts <- list("2017" = ISOdatetime(2017, 9, 12, 10, 30, 0),
@@ -83,8 +85,7 @@ crab_dat$exposure_weeks <- "control"
 
 for (i in names(starts)) {
 
-    ind <- crab_dat$year == i &
-        crab_dat$DATETIME > ends[[i]]
+    ind <- crab_dat$year == i & crab_dat$DATETIME > ends[[i]]
     crab_dat$exposure[ind] <- "after"
 
     weeks_after <- difftime(crab_dat$DATETIME[ind], ends[[i]], units = "weeks")
@@ -130,6 +131,6 @@ year_plot(yr = 2017, loc = "Carson")
 #     plot_ly(x = ~DATETIME, y = ~TRANSMITTER, color = ~exposure) %>%
 #     add_markers()
 
-save(crab_dat, file = "data/crab_dat.RData")
+usethis::use_data(crab_dat, overwrite = TRUE)
 
 

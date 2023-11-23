@@ -4,9 +4,10 @@
 \alias{fit_ssm}
 \title{Function for fitting state-space movement model}
 \usage{
-fit_ssm(track, formula = NULL, gamma_model = "RW", gamma_threshold = 0.8,
-  gamma_prob = 0.95, dist = "t", silent = FALSE, gr_threshold = 10,
-  start_par = NULL, scale = "sd")
+fit_ssm(track, formula = NULL, gamma_model = "RW",
+  gamma_threshold = 0.8, gamma_prob = 0.95, dist = "t",
+  silent = FALSE, gr_threshold = 10, start_par = NULL,
+  scale = "sd")
 }
 \arguments{
 \item{track}{data.frame of an individual track containing time, UTM coordinates, time differences
@@ -25,7 +26,8 @@ as a random walk ("RW") or an "AR1" process?}
 
 \item{gamma_threshold}{A threshold for defining directed or area-restricted phases of movement}
 
-\item{dist}{Distribution to use for observation error ("normal", "t", or "cauchy").
+\item{dist}{Distribution to use for observation error ("null", "normal", "t", "cauchy", "robust").
+The "robust" option is a mixture of the normal and t distributions.
 If NULL, locations are to be "true".}
 
 \item{silent}{Disable tracing information?}

@@ -24,6 +24,20 @@ Type dcauchy(Type x, Type location, Type scale, int give_log){
 }
 VECTORIZE4_ttti(dcauchy);
 
+// Modification of Anders Nielsen's code
+template<class Type>
+Type drobust(Type x, Type mean, Type sd, Type p, Type df, int give_log = 0){
+    Type z = (x - mean) / sd;
+    Type logres = log(Type(1.0) / sd * ((1.0 - p) *
+        dnorm(z, Type(0.0), Type(1.0), false) + p * dt(z, df, false)));
+    if(!give_log){
+        return exp(logres);
+    }else{
+        return logres;
+    }
+}
+VECTORIZE6_ttttti(drobust);
+
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
@@ -41,6 +55,10 @@ Type objective_function<Type>::operator() ()
     DATA_VECTOR(nu_lat);
     DATA_VECTOR(scale_lon);   // Cauchy distribution observation error parameters from ""
     DATA_VECTOR(scale_lat);
+    DATA_VECTOR(drobust_sd_lon); // normal-t mixture error parameters from ""
+    DATA_VECTOR(drobust_sd_lat);
+    DATA_VECTOR(drobust_p);
+    DATA_VECTOR(drobust_df);
     DATA_INTEGER(n);          // Number of records
     DATA_INTEGER(dist);       // Switch for the distribution to use for observation error
     DATA_INTEGER(fix_gamma);  // Switch for estimating fixed or time varrying gamma
@@ -146,6 +164,13 @@ Type objective_function<Type>::operator() ()
             // cauchy distribution (SIMULATE not implemented)
             nll -= dcauchy(y_lon(i), x_lon(i), alpha_lon * scale_lon(i), true);
             nll -= dcauchy(y_lat(i), x_lat(i), alpha_lat * scale_lat(i), true);
+        }
+        if (dist == 4) {
+            // normal-t mixture (SIMULATE not implemented)
+            nll -= drobust(y_lon(i), x_lon(i), alpha_lon * drobust_sd_lon(i),
+                           drobust_p(i), drobust_df(i), true);
+            nll -= drobust(y_lat(i), x_lat(i), alpha_lat * drobust_sd_lat(i),
+                           drobust_p(i), drobust_df(i), true);
         }
     }
 

@@ -16,7 +16,8 @@
 #' @param gamma_threshold  A threshold for defining directed or area-restricted phases of movement
 #' @param gamma_prop       Probability of being considered above or below gamma_threshold value
 #'                         (i.e. "directed" or "area-restricted")
-#' @param dist   Distribution to use for observation error ("normal", "t", or "cauchy").
+#' @param dist   Distribution to use for observation error ("null", "normal", "t", "cauchy", "robust").
+#'               The "robust" option is a mixture of the normal and t distributions.
 #'               If NULL, locations are to be "true".
 #' @param silent Disable tracing information?
 #' @param gr_threshold Stop if maximum gradient exceeds this value (large values indicate convergence issues)
@@ -68,9 +69,13 @@ fit_ssm <- function(track, formula = NULL , gamma_model = "RW", gamma_threshold 
                      nu_lat = track$nu_lat,
                      scale_lon = track$scale_lon,
                      scale_lat = track$scale_lat,
+                     drobust_sd_lon = track$robust_sd_lon,
+                     drobust_sd_lat = track$robust_sd_lat,
+                     drobust_p = tracks$p,
+                     drobust_df = tracks$df,
                      delta_t = track$delta_t,
                      n = nrow(track),
-                     dist = as.numeric(factor(dist, levels = c("null", "normal", "t", "cauchy"))) - 1,
+                     dist = as.numeric(factor(dist, levels = c("null", "normal", "t", "cauchy", "robust"))) - 1,
                      fix_gamma = as.numeric(gamma_model == "fixed"),
                      logit_gamma_threshold = log(gamma_threshold / (1 - gamma_threshold)))
 
