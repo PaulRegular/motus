@@ -53,13 +53,14 @@ tmb_pars <- list(log_sd_lon = rep(0, length(unique(tmb_data$n_i))),
                  log_nu_lat = rep(log(3), length(unique(tmb_data$n_i))),
                  log_scale_lon = rep(0, length(unique(tmb_data$n_i))),
                  log_scale_lat = rep(0, length(unique(tmb_data$n_i))),
-                 logit_p = rep(0, length(unique(tmb_data$n_i))),
+                 logit_p = rep(log(0.05 / (1 - 0.05)), length(unique(tmb_data$n_i))),
                  log_df = rep(log(3), length(unique(tmb_data$n_i))))
 
 ## df fixed to 3 to account for heavy tails while maintaining statistical properities (mean, sd, etc.)
 tmb_map <- list(log_nu_lon = rep(factor(NA), length(tmb_pars$log_nu_lon)),
                 log_nu_lat = rep(factor(NA), length(tmb_pars$log_nu_lat)),
-                logit_p = factor(rep(NA, length(tmb_pars$logit_p)))) # assume p = 50%
+                log_df = factor(rep(NA, length(tmb_pars$log_df))),
+                logit_p = factor(rep(NA, length(tmb_pars$logit_p)))) # assume p = 0.05
 str(tmb_data)
 str(tmb_pars)
 
@@ -110,7 +111,7 @@ sdrep
 
 tmb_data$dist <- 3
 obj <- MakeADFun(tmb_data, tmb_pars[c("log_sd_lon", "log_sd_lat", "logit_p", "log_df")],
-                 map = tmb_map["logit_p"], DLL = "obs_error")
+                 map = tmb_map[c("logit_p", "log_df")], DLL = "obs_error")
 
 ## Minimize the objective function using nlminb in R
 opt <- nlminb(obj$par, obj$fn, obj$gr,
